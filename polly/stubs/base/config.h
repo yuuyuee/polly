@@ -5,7 +5,7 @@
 #endif
 
 static_assert(__cplusplus >= 201103L,
-    "This library must be enabled with the -std=c++11 or -std=gnu++11 compiler options.");
+    "This library must be enabled with the -std=c++11 compiler options.");
 
 #if !defined(__GNUC__) || !defined(__GNUC_MINOR__)
 # error "This library requires GNU compiler."

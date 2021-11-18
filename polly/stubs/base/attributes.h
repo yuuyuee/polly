@@ -2,7 +2,7 @@
 
 #include "stubs/base/config.h"
 
-#if POLLY_HAS_ATTRIBUTE(always_inline) || POLLY_GNUC_PREREQ(3, 1)
+#if POLLY_HAS_ATTRIBUTE(always_inline) || defined(__GNUC__)
 # define POLLY_ATTR_ALWAYS_INLINE __attribute__((always_inline))
 #endif
 
@@ -40,12 +40,11 @@
 #endif
 
 #define POLLY_CACHELINE_SIZE 64
-#define POLLY_CACHELINE_ALIGNED __attribute__((aligned(POLLY_CACHELINE_SIZE)))
+#if POLLY_HAS_ATTRIBUTE(aligned) || defined(__GNUC__)
+# define POLLY_CACHELINE_ALIGNED __attribute__((aligned(POLLY_CACHELINE_SIZE)))
+#endif
 
 #if POLLY_HAS_BUILTIN(__builtin_expect) || defined(__GNUC__)
-#define POLLY_EXPECT_TRUE(x) __builtin_expect(false || (x), true)
-#define POLLY_EXPECT_FALSE(x) __builtin_expect(false || (x), false)
-#else
-#define POLLY_EXPECT_TRUE(x) (x)
-#define POLLY_EXPECT_FALSE(x) (x)
+# define POLLY_EXPECT_TRUE(x) __builtin_expect(false || (x), true)
+# define POLLY_EXPECT_FALSE(x) __builtin_expect(false || (x), false)
 #endif
