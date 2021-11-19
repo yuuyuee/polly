@@ -4,16 +4,17 @@
 #include "stubs/base/check.h"
 
 namespace polly {
-namespace exception_internal {
+namespace {
 template<typename Exception>
-POLLY_ATTR_NORETURN void ThrowDelegate(const Exception& ex) {
+POLLY_ATTR_NORETURN POLLY_ATTR_ALWAYS_INLINE
+void ThrowDelegate(const Exception& ex) {
 #if defined(POLLY_HAVE_EXCEPTIONS)
   throw ex;
 #else
   POLLY_SAFE_WRITE(ex.what());
 #endif
 }
-} // namespace exception_internal
+} // anonymous namespace
 
 #define POLLY_MAKE_EXCEPTIONS_FN(XX)                  \
   XX(ThrowStdLogicError, std::logic_error)            \
@@ -27,8 +28,8 @@ POLLY_ATTR_NORETURN void ThrowDelegate(const Exception& ex) {
   XX(ThrowStdUnderflowError, std::underflow_error)
 
 #define POLLY_EXCEPTIONS_MAP(fn, type) \
-  void fn(const char* what) { exception_internal::ThrowDelegate(type{what}); }  \
-  void fn(const char* what) { exception_internal::ThrowDelegate(type{what}); }
+  void fn(const char* what) { ThrowDelegate(type{what}); }  \
+  void fn(const char* what) { ThrowDelegate(type{what}); }
 
 POLLY_MAKE_EXCEPTIONS_FN(POLLY_EXCEPTIONS_MAP)
 
