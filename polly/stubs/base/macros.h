@@ -4,8 +4,8 @@
 
 namespace polly {
 namespace macros_internal {
-template<typename T, size_t N, typename R = char (&)[N]>
-R ArraySizeHelper(const T (&a)[N]);
+template<typename T, size_t N>
+auto ArraySizeHelper(const T (&a)[N]) -> char (&)[N];
 } // namespace macros_internal
 } // namespace polly
 
