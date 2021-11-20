@@ -73,7 +73,7 @@ basic_string_view<Char, Traits>::rfind(
 template<typename Char, typename Traits>
 typename basic_string_view<Char, Traits>::size_type
 basic_string_view<Char, Traits>::rfind(Char c, size_type pos) const noexcept {
-  if (len_) {
+  if (len_ > 0) {
     for (pos = std::min(len_ - 1, pos) + 1; pos > 0; --pos) {
       if (traits_type::eq(ptr_[pos - 1], c))
         return pos;
@@ -82,6 +82,84 @@ basic_string_view<Char, Traits>::rfind(Char c, size_type pos) const noexcept {
   return npos;
 }
 
+// basic_string_view::find_first_of
+template<typename Char, typename Traits>
+typename basic_string_view<Char, Traits>::size_type
+basic_string_view<Char, Traits>::find_first_of(
+    basic_string_view v, size_type pos) const noexcept {
+  if (v.len_ > 0) {
+    for (; pos < len_; ++pos) {
+      if (traits_type::find(v.ptr_, v.len_, ptr_[pos]))
+        return pos;
+    }
+  }
+  return npos;
+}
+
+// basic_string_view::find_last_of
+template<typename Char, typename Traits>
+typename basic_string_view<Char, Traits>::size_type
+basic_string_view<Char, Traits>::find_last_of(
+    basic_string_view v, size_type pos) const noexcept {
+  if (len_ > 0 && v.len_ > 0) {
+    for (pos = std::min(pos, len_ - 1) + 1; pos > 0; --pos) {
+      if (traits_type::find(v.ptr_, v.len_, ptr_[pos]))
+        return pos;
+    }
+  }
+  return npos;
+}
+
+// basic_string_view::find_first_not_of
+template<typename Char, typename Traits>
+typename basic_string_view<Char, Traits>::size_type
+basic_string_view<Char, Traits>::find_first_not_of(
+    basic_string_view v, size_type pos) const noexcept {
+  for (; pos < len_; ++pos) {
+    if (!traits_type::find(v.ptr_, v.len_, ptr_[pos]))
+      return pos;
+  }
+  return npos;
+}
+
+template<typename Char, typename Traits>
+typename basic_string_view<Char, Traits>::size_type
+basic_string_view<Char, Traits>::find_first_not_of(
+    Char c, size_type pos) const noexcept {
+  for (; pos < len_; ++pos) {
+    if (!traits_type::eq(c, ptr_[pos]))
+      return pos;
+  }
+  return npos;
+  return npos;
+}
+
+// basic_string_view::find_last_not_of
+template<typename Char, typename Traits>
+typename basic_string_view<Char, Traits>::size_type
+basic_string_view<Char, Traits>::find_last_not_of(
+    basic_string_view v, size_type pos) const noexcept {
+  if (len_ > 0 && v.len_ > 0) {
+    for (pos = std::min(pos, len_ - 1) + 1; pos > 0; --pos) {
+      if (!traits_type::find(v.ptr_, v.len_, ptr_[pos]))
+        return pos;
+    }
+  }
+  return npos;
+}
+
+template<typename Char, typename Traits>
+typename basic_string_view<Char, Traits>::size_type
+basic_string_view<Char, Traits>::find_last_not_of(
+    Char c, size_type pos) const noexcept {
+  if (len_ > 0) {
+    for (pos = std::min(pos, len_ - 1) + 1; pos > 0; --pos) {
+      if (!traits_type::eq(c, ptr_[pos]))
+        return pos;
+    }
+  }
+  return npos;
+}
 
 
 

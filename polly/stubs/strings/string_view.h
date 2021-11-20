@@ -40,7 +40,7 @@ public:
   constexpr basic_string_view() noexcept: ptr_(nullptr), size_(0) {}
   constexpr explicit basic_string_view(const_pointer s) noexcept
       : ptr_(s), len_(s ? traits_type::length(s) : 0) {}
-  constexpr basic_string_view(const char* s, size_t n) noexcept
+  constexpr basic_string_view(const Char* s, size_t n) noexcept
       : ptr_(s), len_(n) {}
 
   // Iterator
@@ -176,50 +176,49 @@ public:
   // @return Position of the first occurence of any character of the substring,
   // or `npos' is no such character is found.
   size_type find_first_of(basic_string_view s, size_type pos = 0) const noexcept;
-  size_type find_first_of(char c, size_type pos = 0) const noexcept {
+  size_type find_first_of(Char c, size_type pos = 0) const noexcept {
     return find(c, pos);
   }
-  size_type find_first_of(const char* s, size_type pos,
+  size_type find_first_of(const Char* s, size_type pos,
                                     size_type count) const {
     return find_first_of(string_view(s, count), pos);
   }
-  size_type find_first_of(const char* s, size_type pos = 0) const {
+  size_type find_first_of(const Char* s, size_type pos = 0) const {
     return find_first_of(string_view(s), pos);
   }
 
   size_type find_last_of(basic_string_view s, size_type pos = npos) const noexcept;
-  size_type find_last_of(char c, size_type pos = npos) const noexcept {
+  size_type find_last_of(Char c, size_type pos = npos) const noexcept {
     return rfind(c, pos);
   }
-  size_type find_last_of(const char* s, size_type pos, size_type count) const {
+  size_type find_last_of(const Char* s, size_type pos, size_type count) const {
     return find_last_of(string_view(s, count), pos);
   }
-  size_type find_last_of(const char* s, size_type pos = npos) const {
+  size_type find_last_of(const Char* s, size_type pos = npos) const {
     return find_last_of(string_view(s), pos);
   }
 
 
   size_type find_first_not_of(basic_string_view s, size_type pos = 0) const noexcept;
-  size_type find_first_not_of(char c, size_type pos = 0) const noexcept;
-  size_type find_first_not_of(const char* s, size_type pos,
+  size_type find_first_not_of(Char c, size_type pos = 0) const noexcept;
+  size_type find_first_not_of(const Char* s, size_type pos,
                               size_type count) const {
-    return find_first_not_of(string_view(s, count), pos);
+    return find_first_not_of(basic_string_view(s, count), pos);
   }
-  size_type find_first_not_of(const char* s, size_type pos = 0) const {
-    return find_first_not_of(string_view(s), pos);
+  size_type find_first_not_of(const Char* s, size_type pos = 0) const {
+    return find_first_not_of(basic_string_view(s), pos);
   }
 
   size_type find_last_not_of(basic_string_view s,
                              size_type pos = npos) const noexcept;
-  size_type find_last_not_of(char c, size_type pos = npos) const noexcept;
-  size_type find_last_not_of(const char* s, size_type pos,
+  size_type find_last_not_of(Char c, size_type pos = npos) const noexcept;
+  size_type find_last_not_of(const Char* s, size_type pos,
                              size_type count) const {
     return find_last_not_of(string_view(s, count), pos);
   }
-  size_type find_last_not_of(const char* s, size_type pos = npos) const {
-    return find_last_not_of(string_view(s), pos);
+  size_type find_last_not_of(const Char* s, size_type pos = npos) const {
+    return find_last_not_of(basic_string_view(s), pos);
   }
-
 
   template <typename Alloc>
   explicit operator std::basic_string<Char, traits_type, Alloc>() const {
