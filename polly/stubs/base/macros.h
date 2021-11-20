@@ -1,15 +1,6 @@
 #pragma once
 
 #include "stubs/base/config.h"
-#include <cassert>
-
-#if defined(NDEBUG)
-# define POLLY_CONST_ASSERT(exp) \
-    (false ? static_cast<void>(exp) : static_cast<void>(0))
-#else
-# define POLLY_CONST_ASSERT(expr) \
-    (POLLY_EXPECT_TRUE(expr) ? static_cast<void>(0) : [] { assert(false && #exp); }())
-#endif
 
 namespace polly {
 namespace macros_internal {

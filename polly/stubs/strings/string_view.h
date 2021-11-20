@@ -13,8 +13,8 @@ using std::string_view;
 #include <limits>
 #include <algorithm>
 
-#include "stubs/base/const.h"
-#include "stubs/base/macros.h"
+#include "stubs/base/attributes.h"
+#include "stubs/base/check.h"
 #include "stubs/base/exception.h"
 
 namespace polly {
@@ -37,11 +37,24 @@ public:
 
   static constexpr size_type npos = static_cast<size_type>(-1);
 
-  constexpr basic_string_view() noexcept: ptr_(nullptr), size_(0) {}
+  // Null `basic_string_view` constructor.
+  constexpr basic_string_view() noexcept: ptr_(nullptr), len_(0) {}
+
+  // Implicit constructor of a `basic_string_view' from NUL-terminated `str'.
   constexpr explicit basic_string_view(const_pointer s) noexcept
       : ptr_(s), len_(s ? traits_type::length(s) : 0) {}
+
+  // Implicit constructor of a `basic_string_view' from a `const char*' and `n'.
   constexpr basic_string_view(const Char* s, size_t n) noexcept
       : ptr_(s), len_(n) {}
+
+  // Implicit constructors of a `basic_string_view' from `std::basic_string'.
+  template<typename Alloc>
+  basic_string_view(const std::basic_string<Char, traits_type, Alloc>& s)
+      : basic_string_view(s.data(), s.size()) {}
+
+  // constexpr basic_string_view(const basic_string_view&) noexcept = default;
+  // basic_string_view& operator=(const basic_string_view&) noexcept = default;
 
   // Iterator
   constexpr const_iterator begin() const noexcept { return ptr_; }
@@ -162,8 +175,8 @@ public:
   size_type rfind(const Char* s, size_type pos, size_type count) const {
     return rfind(basic_string_view(s, count), pos);
   }
-  size_type rfind(const char* s, size_type pos = npos) const {
-    return rfind(string_view(s), pos);
+  size_type rfind(const Char* s, size_type pos = npos) const {
+    return rfind(basic_string_view(s), pos);
   }
 
   // Find the first character equal to any of the character in the given
@@ -187,6 +200,15 @@ public:
     return find_first_of(string_view(s), pos);
   }
 
+  // Find the last character equal to any of the character in the given
+  // character sequence.
+  // @v      view to search for
+  // @pos    position at which to start the search
+  // @count  length substring to search for
+  // @s      pointer to a character string to search for
+  // @ch     character to searchc for
+  // @return Position of the last occurence of any character of the substring,
+  // or `npos' is no such character is found.
   size_type find_last_of(basic_string_view s, size_type pos = npos) const noexcept;
   size_type find_last_of(Char c, size_type pos = npos) const noexcept {
     return rfind(c, pos);
@@ -198,7 +220,15 @@ public:
     return find_last_of(string_view(s), pos);
   }
 
-
+  // Find the first character not equal to any of the character in the given
+  // character sequence.
+  // @v      view to search for
+  // @pos    position at which to start the search
+  // @count  length substring to search for
+  // @s      pointer to a character string to search for
+  // @ch     character to searchc for
+  // @return Position of the first character not equal to any character of
+  // the substring, or `npos' is no such character is found.
   size_type find_first_not_of(basic_string_view s, size_type pos = 0) const noexcept;
   size_type find_first_not_of(Char c, size_type pos = 0) const noexcept;
   size_type find_first_not_of(const Char* s, size_type pos,
@@ -209,6 +239,15 @@ public:
     return find_first_not_of(basic_string_view(s), pos);
   }
 
+  // Find the last character not equal to any of the character in the given
+  // character sequence.
+  // @v      view to search for
+  // @pos    position at which to start the search
+  // @count  length substring to search for
+  // @s      pointer to a character string to search for
+  // @ch     character to searchc for
+  // @return Position of the last character not equal to any character of
+  // the substring, or `npos' is no such character is found.
   size_type find_last_not_of(basic_string_view s,
                              size_type pos = npos) const noexcept;
   size_type find_last_not_of(Char c, size_type pos = npos) const noexcept;
@@ -235,7 +274,7 @@ private:
 
 private:
 
-  pointer ptr_;
+  const_pointer ptr_;
   size_type len_;
 };
 

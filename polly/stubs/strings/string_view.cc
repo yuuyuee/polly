@@ -50,7 +50,7 @@ basic_string_view<Char, Traits>::find(Char c, size_type pos) const noexcept {
   if (pos < len_) {
     const Char* p = traits_type::find(ptr_ + pos, len_ - pos, c);
     if (p)
-      ret = p - ptr;
+      ret = p - ptr_;
   }
   return ret;
 }

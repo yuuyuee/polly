@@ -8,7 +8,7 @@
 namespace polly {
 namespace check_internal {
 void SafeWriteToStderr(const char* file, int line, const char* fmt, ...) {
-  constexpr char* kTruncated = " ... (message truncated)\n";
+  constexpr const char* kTruncated = " ... (message truncated)\n";
   constexpr size_t kBufferSize = 1024;
   constexpr size_t kTruncatedOffset = kBufferSize - polly::ConstStrlen(kTruncated) - 1;
   char buffer[kBufferSize];
@@ -23,11 +23,11 @@ void SafeWriteToStderr(const char* file, int line, const char* fmt, ...) {
     return;
 
   len += prefix_len;
-  if (len >= kBufferSize) {
+  if (len >= static_cast<int>(kBufferSize)) {
     memcpy(&(buffer[0]) + kTruncatedOffset, kTruncated, polly::ConstStrlen(kTruncated));
     len = kBufferSize - 1;
   }
   ::write(STDERR_FILENO, buffer, len);
 }
-} // namespace safe_write_internal
+} // namespace check_internal
 } // namespace polly
