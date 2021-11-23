@@ -20,8 +20,6 @@ using std::string_view;
 #include "stubs/const.h"
 #include "stubs/exception.h"
 
-template<> struct std::char_traits<char>;
-
 namespace polly {
 template<typename Char, typename Traits = std::char_traits<Char>>
 class basic_string_view;

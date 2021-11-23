@@ -997,8 +997,3 @@ TEST_F(StringViewStreamTest, ResetsWidth) {
     EXPECT_EQ("[###hi]", oss.str());
   }
 }
-
-int main(int argc, char* argv[]) {
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
