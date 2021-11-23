@@ -997,3 +997,10 @@ TEST_F(StringViewStreamTest, ResetsWidth) {
     EXPECT_EQ("[###hi]", oss.str());
   }
 }
+
+TEST(StringViewHashTest, Hash) {
+  std::string s("hello");
+  std::string empty;
+  EXPECT_EQ(std::hash<polly::string_view>{}(s), std::hash<std::string>{}(s));
+  EXPECT_EQ(std::hash<polly::string_view>{}(empty), 0);
+}

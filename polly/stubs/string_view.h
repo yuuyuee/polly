@@ -19,8 +19,13 @@ using std::string_view;
 #include "stubs/check.h"
 #include "stubs/const.h"
 #include "stubs/exception.h"
+#include "stubs/hash.h"
 
 namespace polly {
+// The class template basic_string_view describes an object that can refer to
+// a constant contiguous sequence of char-like objects with the first element
+// of the sequence at position zero. it's the users responsibility to ensure
+// that std::basic_string_view does not outlive the pointed to character array.
 template<typename Char, typename Traits = std::char_traits<Char>>
 class basic_string_view;
 
@@ -382,8 +387,7 @@ basic_string_view<Char, Traits>::npos = static_cast<size_type>(-1);
 
 namespace string_view_internal {
 template<typename Char, typename Traits>
-const char* FindHelper(
-    const Char* haystack, size_t haylen,
+const char* FindHelper(const Char* haystack, size_t haylen,
     const Char* needle, size_t nlen) {
   if (nlen == 0)
     return haystack;
@@ -603,5 +607,19 @@ std::basic_ostream<Char, Traits>& operator<<(
   return o;
 }
 
+namespace string_view_internal {
+template<typename Char, typename Traits>
+struct hash_base {
+  size_t operator()(basic_string_view<Char, Traits> v) {
+    return MurMurHash64(v.data(), v.size() * sizeof(Char));
+  }
+};
+} // namespace string_view_internal
 } // namespace polly
+
+namespace std {
+template<typename Char, typename Traits>
+struct hash<polly::basic_string_view<Char, Traits>>
+    : public polly::string_view_internal::hash_base<Char, Traits> {};
+} // namespace std
 #endif // POLLY_HAVE_STD_STRING_VIEW

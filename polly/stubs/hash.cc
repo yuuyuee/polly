@@ -25,6 +25,9 @@ inline size_t ShiftMix(size_t v) {
 
 // Implementation of Murmur hash for 64-bit size_t.
 size_t MurMurHash64(const void* ptr, size_t len, size_t seed) {
+  if (len == 0)
+    return 0;
+
   static constexpr const size_t kMul = (0xC6A4A793UL << 32) +  0x5bd1e995UL;
   const char* cptr = static_cast<const char*>(ptr);
 
@@ -51,6 +54,9 @@ size_t MurMurHash64(const void* ptr, size_t len, size_t seed) {
 
 // Implementation of FNV-1a hash for 64-bit size_t.
 size_t FNVHash64(const void* ptr, size_t len, size_t seed) {
+  if (len == 0)
+    return 0;
+
   size_t hash = seed;
   const char* cptr = static_cast<const char*>(ptr);
   for (; len > 0; --len) {
