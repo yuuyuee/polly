@@ -21,7 +21,14 @@ using std::string_view;
 #include "stubs/base/const.h"
 #include "stubs/base/exception.h"
 
+template<> struct std::char_traits<char>;
+
 namespace polly {
+template<typename Char, typename Traits = std::char_traits<Char>>
+class basic_string_view;
+
+using string_view = basic_string_view<char, std::char_traits<char>>;
+
 template<typename Char, typename Traits>
 class basic_string_view {
 public:
@@ -352,6 +359,7 @@ public:
     return find_last_not_of(basic_string_view(s), pos);
   }
 
+  // Explicit converts to std::basic_string.
   template <typename Alloc>
   explicit operator std::basic_string<Char, traits_type, Alloc>() const {
     if (!data()) return {};
@@ -359,13 +367,13 @@ public:
   }
 
 private:
-  static constexpr size_type kMaxSize = std::numeric_limits<difference_type>::max() / sizeof(Char);
+  static constexpr size_type kMaxSize =
+      std::numeric_limits<difference_type>::max() / sizeof(Char);
 
   static constexpr int CompareHelper(size_type a, size_type b, int r) {
-    return r == 0 ? static_cast<int>(a > b) - static_cast<int>(a < b) : (r < 0 ? -1 : 1);
+    return r == 0 ? static_cast<int>(a > b) - static_cast<int>(a < b)
+        : (r < 0 ? -1 : 1);
   }
-
-private:
 
   const_pointer ptr_;
   size_type len_;
@@ -374,8 +382,6 @@ private:
 template<typename Char, typename Traits>
 const typename basic_string_view<Char, Traits>::size_type
   basic_string_view<Char, Traits>::npos = static_cast<size_type>(-1);
-
-using string_view = basic_string_view<char, std::char_traits<char>>;
 
 namespace string_view_internal {
 template<typename Char, typename Traits>
