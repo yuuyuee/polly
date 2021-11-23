@@ -381,7 +381,7 @@ private:
 
 template<typename Char, typename Traits>
 const typename basic_string_view<Char, Traits>::size_type
-  basic_string_view<Char, Traits>::npos = static_cast<size_type>(-1);
+basic_string_view<Char, Traits>::npos = static_cast<size_type>(-1);
 
 namespace string_view_internal {
 template<typename Char, typename Traits>
