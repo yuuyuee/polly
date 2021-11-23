@@ -8,7 +8,9 @@
 namespace polly {
 using std::string_view;
 } // namespace polly
+
 #else // POLLY_HAVE_STD_STRING_VIEW
+
 #include <string>
 #include <iterator>
 #include <limits>

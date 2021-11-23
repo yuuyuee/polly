@@ -1,9 +1,31 @@
 #pragma once
 
 #include <string>
+#include <cstdlib>
+#include <stdexcept>
+
 #include "stubs/attributes.h"
 
+#if !defined(POLLY_HAVE_EXCEPTIONS)
+#include "stubs/check.h"
+#endif
+
 namespace polly {
+namespace exception_internal {
+template<typename Exception>
+POLLY_ATTR_NORETURN POLLY_ATTR_ALWAYS_INLINE
+inline void ThrowDelegate(const Exception& ex) {
+#if defined(POLLY_HAVE_EXCEPTIONS)
+  throw ex;
+#else
+  POLLY_MESSAGE(ex.what());
+  std::abort();
+#endif
+}
+} // anonymous namespace
+
+// Exception throw delegator
+
 // Logic error
 POLLY_ATTR_NORETURN void ThrowStdLogicError(const std::string& what);
 POLLY_ATTR_NORETURN void ThrowStdLogicError(const char* what);
