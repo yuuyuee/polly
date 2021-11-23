@@ -7,7 +7,7 @@ namespace polly {
 namespace {
 template<typename Exception>
 POLLY_ATTR_NORETURN POLLY_ATTR_ALWAYS_INLINE
-void ThrowDelegate(const Exception& ex) {
+inline void ThrowDelegate(const Exception& ex) {
 #if defined(POLLY_HAVE_EXCEPTIONS)
   throw ex;
 #else
@@ -27,9 +27,9 @@ void ThrowDelegate(const Exception& ex) {
   XX(ThrowStdOverflowError, std::overflow_error)      \
   XX(ThrowStdUnderflowError, std::underflow_error)
 
-#define POLLY_EXCEPTIONS_MAP(fn, type) \
+#define POLLY_EXCEPTIONS_MAP(fn, type)                      \
   void fn(const char* what) { ThrowDelegate(type{what}); }  \
-  void fn(const char* what) { ThrowDelegate(type{what}); }
+  void fn(const std::string& what) { ThrowDelegate(type{what}); }
 
 POLLY_MAKE_EXCEPTIONS_FN(POLLY_EXCEPTIONS_MAP)
 

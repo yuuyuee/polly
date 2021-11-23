@@ -22,4 +22,24 @@ constexpr const char* ConstBasename(const char* s) {
       ? s : const_internal::ReverseFindFirst(s + ConstStrlen(s) - 1, s - 1, '/');
 }
 
+template<typename T>
+constexpr const T& ConstMin(const T& a, const T& b) {
+  return b < a ? b : a;
+}
+
+template<typename T, typename Compare>
+constexpr const T& ConstMin(const T& a, const T& b, Compare compare) {
+  return compare(b, a) ? b : a;
+}
+
+template<typename T>
+constexpr const T& ConstMax(const T& a, const T& b) {
+  return a < b ? b: a;
+}
+
+template<typename T, typename Compare>
+constexpr const T& ConstMax(const T& a, const T& b, Compare compare) {
+  return  compare(a, b) ? b: a;
+}
+
 } // namespace polly
