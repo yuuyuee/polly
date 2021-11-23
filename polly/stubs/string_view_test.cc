@@ -1,8 +1,8 @@
 #include <map>
 #include <stdexcept>
 
-#include "stubs/strings/string_view.h"
-#include "stubs/base/macros.h"
+#include "stubs/string_view.h"
+#include "stubs/macros.h"
 #include "gtest/gtest.h"
 
 TEST(StringViewTest, Ctor) {

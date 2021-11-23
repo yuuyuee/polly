@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-#include <cstring>
 
 namespace polly {
 // Implementation of Murmur hash for 64-bit size_t.

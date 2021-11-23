@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "stubs/base/attributes.h"
+#include "stubs/attributes.h"
 
 namespace polly {
 // Logic error

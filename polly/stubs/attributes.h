@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/base/config.h"
+#include "stubs/config.h"
 
 #if POLLY_HAS_ATTRIBUTE(always_inline) || defined(__GNUC__)
 # define POLLY_ATTR_ALWAYS_INLINE __attribute__((always_inline))

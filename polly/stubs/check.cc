@@ -1,4 +1,4 @@
-#include "stubs/base/check.h"
+#include "stubs/check.h"
 
 #include <unistd.h>
 #include <cstdio>

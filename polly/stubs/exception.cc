@@ -1,7 +1,9 @@
-#include "stubs/base/exception.h"
+#include "stubs/exception.h"
+
 #include <stdexcept>
 #include <utility>
-#include "stubs/base/check.h"
+
+#include "stubs/check.h"
 
 namespace polly {
 namespace {
@@ -11,7 +13,8 @@ inline void ThrowDelegate(const Exception& ex) {
 #if defined(POLLY_HAVE_EXCEPTIONS)
   throw ex;
 #else
-  POLLY_SAFE_WRITE(ex.what());
+  POLLY_MESSAGE(ex.what());
+  std::abort();
 #endif
 }
 } // anonymous namespace

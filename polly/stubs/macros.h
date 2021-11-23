@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/base/config.h"
+#include "stubs/config.h"
 
 namespace polly {
 namespace macros_internal {

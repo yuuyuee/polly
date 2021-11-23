@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/base/config.h"
+#include "stubs/config.h"
 
 #if defined(POLLY_HAVE_STD_STRING_VIEW)
 #include <string_view>
@@ -9,17 +9,16 @@ namespace polly {
 using std::string_view;
 } // namespace polly
 #else // POLLY_HAVE_STD_STRING_VIEW
-#include <cstring>
 #include <string>
 #include <iterator>
 #include <limits>
 #include <algorithm>
 #include <ostream>
 
-#include "stubs/base/attributes.h"
-#include "stubs/base/check.h"
-#include "stubs/base/const.h"
-#include "stubs/base/exception.h"
+#include "stubs/attributes.h"
+#include "stubs/check.h"
+#include "stubs/const.h"
+#include "stubs/exception.h"
 
 template<> struct std::char_traits<char>;
 
@@ -571,7 +570,7 @@ namespace string_view_internal {
 template<typename Char, typename Traits>
 void WritePadding(std::basic_ostream<Char, Traits>& o, size_t pad) {
   char fill_buf[32];
-  memset(fill_buf, o.fill(), sizeof(fill_buf));
+  std::fill_n(fill_buf, 32, o.fill());
   while (pad) {
     size_t n = std::min(pad, sizeof(fill_buf));
     o.write(fill_buf, n);

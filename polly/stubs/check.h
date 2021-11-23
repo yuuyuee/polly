@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "stubs/base/attributes.h"
-#include "stubs/base/const.h"
+#include "stubs/attributes.h"
+#include "stubs/const.h"
 
 namespace polly {
 namespace check_internal {
