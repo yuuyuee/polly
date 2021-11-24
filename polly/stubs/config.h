@@ -117,3 +117,8 @@ static_assert(POLLY_GNUC_PREREQ(4, 8), "This library require GNUC version at lea
 #if defined(__SANITIZE_MEMORY__)
 # define POLLY_HAVE_MEMORY_SANITIZER 1
 #endif
+
+// C++ language features
+#if __cpp_inline_variables >= 201606L
+# define POLLY_HAVE_INLINE_VARIABLES 1
+#endif

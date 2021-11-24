@@ -6,7 +6,7 @@
 # define POLLY_ATTR_ALWAYS_INLINE __attribute__((always_inline))
 #endif
 
-#if POLLY_HAS_ATTRIBUTE(always_inline) || defined(__GNUC__)
+#if POLLY_HAS_ATTRIBUTE(noinline) || defined(__GNUC__)
 # define POLLY_ATTR_NOINLINE __attribute__((noinline))
 #endif
 

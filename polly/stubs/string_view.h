@@ -50,7 +50,11 @@ public:
   using size_type = std::size_t;
   using difference_type = std::ptrdiff_t;
 
-  static const size_type npos;
+#if defined(__cpp_inline_variables)
+  static inline constexpr size_type npos = static_cast<size_type>(-1);
+#else
+  static constexpr size_type npos = static_cast<size_type>(-1);
+#endif
 
   // Null `basic_string_view` constructor.
   constexpr basic_string_view() noexcept: ptr_(nullptr), len_(0) {}
@@ -371,8 +375,13 @@ public:
   }
 
 private:
+#if defined(__cpp_inline_variables)
+  static inline constexpr size_type kMaxSize =
+      std::numeric_limits<difference_type>::max() / sizeof(Char);
+#else
   static constexpr size_type kMaxSize =
       std::numeric_limits<difference_type>::max() / sizeof(Char);
+#endif
 
   static constexpr int CompareHelper(size_type a, size_type b, int r) {
     return r == 0 ? static_cast<int>(a > b) - static_cast<int>(a < b)
@@ -383,9 +392,15 @@ private:
   size_type len_;
 };
 
+#if !defined(__cpp_inline_variables)
 template<typename Char, typename Traits>
-const typename basic_string_view<Char, Traits>::size_type
-basic_string_view<Char, Traits>::npos = static_cast<size_type>(-1);
+ constexpr typename basic_string_view<Char, Traits>::size_type
+ basic_string_view<Char, Traits>::npos;
+
+template<typename Char, typename Traits>
+ constexpr typename basic_string_view<Char, Traits>::size_type
+ basic_string_view<Char, Traits>::kMaxSize;
+#endif
 
 namespace string_view_internal {
 template<typename Char, typename Traits>
