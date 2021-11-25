@@ -122,3 +122,8 @@ static_assert(POLLY_GNUC_PREREQ(4, 8), "This library require GNUC version at lea
 #if __cpp_inline_variables >= 201606L
 # define POLLY_HAVE_INLINE_VARIABLES 1
 #endif
+
+#if POLLY_GNUC_PREREQ(7, 4)
+# define POLLY_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE 1
+# define POLLY_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE 1
+#endif

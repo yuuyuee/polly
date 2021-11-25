@@ -18,7 +18,7 @@ using std::string_view;
 #include <ostream>
 
 #include "stubs/attributes.h"
-#include "stubs/check.h"
+#include "stubs/assert.h"
 #include "stubs/const.h"
 #include "stubs/exception.h"
 #include "stubs/hash.h"

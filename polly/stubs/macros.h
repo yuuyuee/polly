@@ -1,7 +1,7 @@
 #pragma once
 
 #include "stubs/config.h"
-#include "stubs/identity.h"
+#include "stubs/type_traits.h"
 
 namespace polly {
 namespace macros_internal {

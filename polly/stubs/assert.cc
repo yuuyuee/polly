@@ -1,4 +1,4 @@
-#include "stubs/check.h"
+#include "stubs/assert.h"
 
 #include <unistd.h>
 #include <cstdio>
@@ -6,7 +6,7 @@
 #include <cstring>
 
 namespace polly {
-namespace check_internal {
+namespace assert_internal {
 void SafeWriteToStderr(const char* file, int line, const char* fmt, ...) {
   constexpr const char* kTruncated = " ... (message truncated)\n";
   constexpr size_t kBufferSize = 1024;
@@ -29,5 +29,5 @@ void SafeWriteToStderr(const char* file, int line, const char* fmt, ...) {
   }
   ::write(STDERR_FILENO, buffer, len);
 }
-} // namespace check_internal
+} // namespace assert_internal
 } // namespace polly

@@ -1,5 +1,5 @@
 string_view_test_SRC = polly/stubs/string_view_test.o 	\
-					   polly/stubs/check.o 				\
+					   polly/stubs/assert.o 				\
 					   polly/stubs/hash.o 				\
 					   third_party/gtest/gtest_main.o 	\
 					   third_party/gtest/gmock-gtest-all.o
