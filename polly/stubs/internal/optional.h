@@ -154,7 +154,7 @@ public:
 // optional_data with non-trivial copy construction and assignment.
 template<typename Tp>
 class optional_data<Tp, true, false, true>
-    : optional_data_base<Tp> {
+    : public optional_data_base<Tp> {
 public:
   using optional_data_base<Tp>::optional_data_base;
   optional_data() = default;
@@ -175,7 +175,7 @@ public:
 // optional_data with non-trivial move construction and assignment.
 template<typename Tp>
 class optional_data<Tp, true, true, false>
-    : optional_data_base<Tp> {
+    : public optional_data_base<Tp> {
 public:
   using optional_data_base<Tp>::optional_data_base;
   optional_data() = default;
@@ -200,7 +200,7 @@ public:
 // optional_data with non-trivial copy/move construction and assignment.
 template<typename Tp>
 class optional_data<Tp, true, false, false>
-    : optional_data_base<Tp> {
+    : public optional_data_base<Tp> {
 public:
   using optional_data_base<Tp>::optional_data_base;
   optional_data() = default;
@@ -230,7 +230,7 @@ public:
 // optional_data with non-trivial destroy
 template<typename Tp, bool Copy, bool Move>
 class optional_data<Tp, false, Copy, Move>
-    : optional_data<Tp, true, Copy, Move> {
+    : public optional_data<Tp, true, Copy, Move> {
 public:
   using optional_data_base<Tp>::optional_data_base;
   optional_data() = default;
@@ -271,6 +271,25 @@ protected:
   constexpr Tp& get() noexcept {
     return static_cast<Dp*>(this)->data_.value_;
   }
+};
+
+template<
+  typename Tp,
+  bool = is_trivially_copy_assignable<Tp>::value,
+  bool = is_trivially_move_constructible<Tp>::value>
+class optional_base: public optional_base_impl<Tp, optional_base<Tp>> {
+public:
+  constexpr optional_base() = default;
+
+  template<
+      typename... Args,
+      typename = typenamem std::enable_if<
+          std::is_constructible<Tp, Args...>::value
+      >::type>
+  constexpr explicit optionial_base(in_place_t, Args&&... args)
+      : data_(in_place, std::forward<Args>(args)...) {}
+
+  optional_data<Tp> data_;
 };
 
 } // optional_internal
