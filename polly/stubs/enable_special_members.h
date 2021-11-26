@@ -21,7 +21,7 @@ struct enable_default_constructor {
     enable_default_constructor_tag)  {}
 };
 
-template<typename Switch, typename Tag = void>
+template<bool Switch, typename Tag = void>
 struct enable_destructor {};
 
 template<
@@ -39,9 +39,9 @@ struct enable_special_members
     : public enable_default_constructor<Default, Tag>,
       public enable_destructor<Destructor, Tag>,
       public enable_copy_move<
-          Copy, CopyAssignment,
-          Move, MoveAssignment,
-          Tag> {};
+        Copy, CopyAssignment,
+        Move, MoveAssignment,
+        Tag> {};
 
 template<typename Tag>
 struct enable_default_constructor<false, Tag> {

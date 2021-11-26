@@ -22,6 +22,8 @@ using std::nullopt;
 #include "stubs/macros.h"
 #include "stubs/utility.h"
 #include "stubs/exception.h"
+#include "stubs/enable_special_members.h"
+#include "stubs/internal/optional.h"
 
 namespace polly {
 // A type of object to thrown by std::optional::value when accessing an optional
@@ -69,7 +71,18 @@ POLLY_INLINE_CONSTEXPR(nullopt_t, nullopt, nullopt_t::construct_tag{});
 // type is ill-formed. Alternatively, an optional of a reference_wrapper of type
 // T may be used to hold a reference. In addition, instantiates an optional
 // with the tag types nullopt_t or in_palce_t is iill-formed.
-template<typename Tp> class optional {
+template<typename Tp>
+class optional
+    : private optional_internal::optional_base<Tp>,
+      private enable_copy_move<
+        std::is_copy_structible<Tp>::value,   // Copy
+        std::is_copy_structible<Tp>::value && // Copy assignment
+        std::is_copy_assignable<Tp>::value,
+        std::is_move_structible<Tp>::value,   // Move
+        std::is_move_structible<Tp>::value && // Move assignment
+        std::is_move_assignable<Tp>::value,
+        optional<Tp>                          // Unique tag type
+      > {
   static_assert(
       !std::is_same<nullopt_t, typename std::remove_cv<T>::type>::value,
       "optional<nullopt_t> is not allowed.");
@@ -79,8 +92,15 @@ template<typename Tp> class optional {
   static_assert(
       !std::is_reference<T>::value,
       "optional<reference> is not allowed.");
+private:
+  template<typename Up>
+  using not_self =  Not<std::is_same<optional, remove_cvref_t<Up>>>;
+
+  template<typename Up>
+  using not_tag =  Not<std::is_same<in_place_t, remove_cvref_t<Up>>>
 public:
-  using value_type = T;
+  using value_type = Tp;
+  using base = optional_base<Tp>
 
   // constructor
   constexpr optional() noexcept {}
@@ -93,22 +113,37 @@ public:
 
 
   template<typename... Args>
-  constexpr explicit optional(in_place_t, Args&&...);
+  constexpr explicit optional(in_place_t, Args&&...)
+      noexcept(std::is_nothrow_constructible<Tp, Args...>::value)
+      : base(in_place, std::forward<Args>(args)...) {}
 
-  template<typename U, typename... Args>
-  constexpr explicit optional(in_place_t, std::initializer_list<U>, Args&&...);
+  // Converting constructor
+  template<
+    typename Up = Tp,
+    typename = Requires<
+      not_self<Up>,
+      not_tag<Up>,
+      std::is_constructible<Tp, Up>,
+      std::is_convertiable<Up, Tp>
+    >>
+  constexpr optional(Up&& v)
+      noexcept(std::is_nothrow_constructible<Tp, Up>::value)
+      : base(in_place, std::forward<Up>(v)) {}
 
-  template<typename U = T>
-  constexpr optional(U&&);
-
-  template<typename U>
-  optional(const optional<U>&);
-
-  template<typename U>
-  optional(optional<U>&&);
+  template<
+    typename Up = Tp,
+    typename = Requires<
+      Not<std::is_same<optional, remove_cvref_t<Tp>>>,
+      Not<std::is_same<in_place_t, remove_cvref_t<Tp>>>,
+      std::is_constructible<Tp, Up>,
+      Not<std::is_convertiable<Up, Tp>>
+    >>
+  constexpr optional(Up&& v)
+      noexcept(std::is_nothrow_constructible<Tp, Up>::value)
+      : base(in_place, std::forward<Up>(v)) {}
 
   // destructor
-  ~optional() { Destruct(); }
+  ~optional() = default;
 
   // assignment
   optional& operator=(nullopt_t) noexcept;
@@ -129,37 +164,94 @@ public:
   void swap(optional&) noexcept();
 
   // observers
-  constexpr const T* operator->() const;
-  constexpr T* operator->();
-  constexpr const T& operator*() const&;
-  constexpr T& operator*() &;
-  constexpr T&& operator*() &&;
-  constexpr const T&& operator*() const&&;
-  constexpr explicit operator bool() const noexcept;
-  constexpr bool has_value() const noexcept;
-  constexpr const T& value() const&;
-  constexpr T& value() &;
-  constexpr T&& value() &&;
-  template<typename U> constexpr T value_or(U&&) const&;
-  template<typename U> constexpr T value_or(U&&) &&;
 
-  // modifiers
-  void reset() noexcept;
-
-private:
-  static_assert(sizeof(T) > 0, "optional::value_type incomplete type");
-
-  void Desturct() {
-    if (hash_value()) {
-      data_.~T();
-    }
+  // Accesses the contained value, returns a pointer to the contained value.
+  constexpr const T* operator->() const noexcept {
+    return (POLLY_ASSERT(this->is_engaged()), std::addressof(this->get()));
   }
 
-  bool has_value_;
-  enum {
-    T data_;
-    char storage_[sizeof(T)];
-  };
+  constexpr T* operator->() noexcept {
+    return (POLLY_ASSERT(this->is_engaged()), std::addressof(this->get()));
+  }
+
+  // Accesses the contained value, returns a reference to the contained value.
+  constexpr const T& operator*() const& {
+    return (POLLY_ASSERT(this->is_engaged()), this->get());
+  }
+
+  constexpr T& operator*() & {
+    return (POLLY_ASSERT(this->is_engaged()), this->get());
+  }
+
+  constexpr T&& operator*() && {
+    return (POLLY_ASSERT(this->is_engaged()), std::move(this->get()));
+  }
+
+  constexpr const T&& operator*() const&&;
+
+  // Checks whether optional contains a value. return true if contains a value,
+  // return false otherwise.
+  constexpr explicit operator bool() const noexcept {
+    return this->is_engaged();
+  }
+
+  constexpr bool has_value() const noexcept {
+    return this->is_engaged();
+  }
+
+  // If optional contains a value, returns a reference to the contained value.
+  // Otherwise, throws a std::bad_optional_access exception. bad_optional_access
+  // has be thrown if optional does not contains a value.
+  constexpr const value_type& value() const& {
+    return this->is_engaged()
+      ? this->get()
+      : (ThrowBadOptionalAccess(), this->get());
+  }
+
+  constexpr value_type& value() & {
+    return this->is_engaged()
+      ? this->get()
+      : (ThrowBadOptionalAccess(), this->get());
+  }
+
+  constexpr value_type&& value() && {
+    return std::move(
+      this->is_engaged()
+        ? this->get()
+        : (ThrowBadOptionalAccess(), this->get());
+    );
+  }
+
+  // Return current value if optional has a value, or default value otherwise.
+  // Tp must meet the requirements of CopyConstructible.
+  // Up&& must be convertible to T.
+  template<typename Up>
+  constexpr value_type value_or(Up&& default_value) const& {
+    static_assert(std::is_copy_constructible<value_type>::value);
+    static_assert(std::is_convertiable<Up&&, value_type>::value);
+    return this->is_engaged()
+        ? this->get()
+        : static_cast<value_type>(std::forward<Up>(default_value));
+  }
+
+  // Return current value if optional has a value, or default value otherwise.
+  // value_type must meet the requirements of MoveConstructible.
+  // Up&& must be convertible to value_type.
+  template<typename Up>
+  constexpr value_type value_or(Up&& default_value) && {
+    static_assert(std::is_move_constructible<value_type>::value);
+    static_assert(std::is_convertiable<Up&&, value_type>::value);
+    return this->is_engaged()
+        ? std::move(this->get())
+        : static_cast<value_type>(std::forward<Up>(default_value));
+  }
+
+  // modifiers
+
+  // If optional contains a value, destroy that value as if by value().T::~T().
+  // otherwise, there are no effects. optional does not contains a value after
+  // this call.
+  using base::reset; // void reset() noexcept;
 };
 } // namespace polly
 

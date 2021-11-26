@@ -16,15 +16,13 @@ struct empty_type {};
 // It is specialized based on whether T is trivially destructible.
 // This is the specialization for trivially destructible type.
 template<typename Tp, bool = std::is_trivially_destructible<Tp>::type>
-struct storage {
-  constexpr storage() noexcept: empty_() {}
+class optional_data_dtor_impl {
+protected:
+  void destroy() noexcept {
+      engaged_ = false;
+  }
 
-  template<typename... Args>
-  constexpr storage(in_place_t, Args&&... args)
-      : value_(std::forward<Args>(args)...) {}
-
-  constexpr Tp& get() noexcept { return value_; }
-
+  bool engaged_;
   union {
     empty_type empty_;
     Tp value_;
@@ -33,16 +31,18 @@ struct storage {
 
 // This is the specialization for non trivially destructible type.
 template<typename Tp>
-struct storage<Tp, false> {
-  constexpr storage() noexcept: empty_() {}
+class optional_data_dtor_impl<Tp, false> {
+protected:
+  ~optional_data_destructor_impl() {}
 
-  template<typename... Args>
-  constexpr storage(in_place_t, Args&&... args)
-      : value_(std::forward<Args>(args)...) {}
+  void destroy() noexcept {
+    if (engaged_) {
+      engaged_ = false;
+      data_.~T();
+    }
+  }
 
-  // User-provided destructor is needed when Tp has non-trivial destructor.
-  ~storage() {}
-
+  bool engaged_;
   union {
     empty_type empty_;
     Tp value_;
@@ -51,23 +51,17 @@ struct storage<Tp, false> {
 
 // THis class template manages constructioin/destruction/assignment of
 // the contained value for a polly::optional.
-template<typename Tp>
-class optional_data_base {
+template<typename Tp, typename store_type = typename std::remove_const<Tp>::type>
+class optional_data_base: public optional_data_dtor_impl<store_type> {
 protected:
-  using store_type = std::remove_const<Tp>::type;
+  using optional_data_dtor_base<store_type>::optional_data_dtor_base;
 
-  optional_data_base() = default;
-  ~optional_data_base() = default;
+  constexpr optional_data_base() noexcept
+      : engaged_(false), empty_() {}
 
   template<typename... Args>
-  constexpr explicit optional_data_base(in_place_t tag, Args&&... args)
-      : engaged_(true), data_(tag, std::forward<Args>(args)...) {}
-
-  constexpr optional_data_base(const optional_data_base&) = default;
-  constexpr optional_data_base(optional_data_base&&) = default;
-
-  optional_data_base& operator=(const optional_data_base&) = default;
-  optional_data_base& operator=(optional_data_base&&) = default;
+  constexpr optional_data_base(in_place_t, Args&&... args)
+      : engaged_(true), value_(std::forward<Args>(args)...) {}
 
   // non-trivial copy constructor
   optional_data_base(bool, const optional_data_base& other) {
@@ -96,8 +90,8 @@ protected:
 
   // non-trivial move assignment
   void move_assign(optional_data_base&& other)
-      noexcept(std::is_nothrow_move_constructible<store_type>::value &&
-               std::is_nothrow_move_assignable<store_type>::value) {
+      noexcept(std::is_nothrow_move_constructible<Tp>::value &&
+               std::is_nothrow_move_assignable<Tp>::value) {
     if (this->engaged_ && other.engaged_) {
       this->value_ = std::move(other.value_);
     } else {
@@ -112,22 +106,14 @@ protected:
   template<typename... Args>
   void construct(Args&&... args)
       noexcept(std::is_nothrow_constructible<store_type, Args...>::value) {
-    engaged_ = true;
-    ::new (std::addressof(data_.value_)) store_type(std::forward<Args>(args)...);
+    this->engaged_ = true;
+    ::new (std::addressof(this->value_))
+        store_type(std::forward<Args>(args)...);
   }
 
-  void destroy() noexcept {
-    engaged_ = false;
-    data_.value_.~store_type();
-  }
-
-  void reset() noexcept {
-    if (engaged_)
-      destroy();
-  }
-
-  bool engaged_{false};
-  storage<store_type> data_;
+  void reset() noexcept { destroy(); }
+  constexpr store_type& get() & noexcept { return this->value_; }
+  constexpr bool is_engaged() const noexcept { return this->engaged_; }
 };
 
 template<typename Tp,
@@ -140,56 +126,45 @@ template<typename Tp,
         bool = polly::is_trivially_move_assignable<Tp>::value &&
               polly::is_trivially_move_constructible<Tp>::value
   >
-class optional_data;
+class optional_base;
 
 // optional_data with trivial destroy, copy and move.
 template<typename Tp>
-class optional_data<Tp, true, true, true>
+class optional_base<Tp, true, true, true>
     : public optional_data_base<Tp> {
 public:
   using optional_data_base<Tp>::optional_data_base;
-  optional_data() = default;
 };
 
 // optional_data with non-trivial copy construction and assignment.
 template<typename Tp>
-class optional_data<Tp, true, false, true>
+class optional_base<Tp, true, false, true>
     : public optional_data_base<Tp> {
 public:
   using optional_data_base<Tp>::optional_data_base;
-  optional_data() = default;
-  ~optional_data() = default;
 
-  optional_data(const optional_data& other)
-      : optional_data_base<Tp>(other.engaged_, other.) {}
+  optional_base(const optional_base& other)
+      : optional_data_base<Tp>(other.engaged_, other) {}
 
-  optional_data& operator=(const optional_data& other) {
+  optional_base& operator=(const optional_base& other) {
     this->copy_assign(other);
     return *this;
   }
-
-  optional_data(optional_data&&) = default;
-  optional_data& operator=(optional_data&&) = default;
 };
 
 // optional_data with non-trivial move construction and assignment.
 template<typename Tp>
-class optional_data<Tp, true, true, false>
+class optional_base<Tp, true, true, false>
     : public optional_data_base<Tp> {
 public:
   using optional_data_base<Tp>::optional_data_base;
-  optional_data() = default;
-  ~optional_data() = default;
 
-  optional_data(const optional_data&) = default;
-  optional_data& operator=(const optional_data&) = default;
-
-  optional_data(optional_data&& other)
+  optional_base(optional_base&& other)
       noexcept(std::is_nothrow_move_constructible<Tp> &&
                std::is_nothrow_move_assignable<Tp>)
       : optional_data_base<Tp>(other.engaged_, std::move(other.get())) {}
 
-  optional_data& operator=(optional_data&& other)
+  optional_base& operator=(optional_base&& other)
       noexcept(std::is_nothrow_move_constructible<Tp> &&
                std::is_nothrow_move_assignable<Tp>) {
     this->move_assign(std::move(other));
@@ -199,27 +174,25 @@ public:
 
 // optional_data with non-trivial copy/move construction and assignment.
 template<typename Tp>
-class optional_data<Tp, true, false, false>
+class optional_base<Tp, true, false, false>
     : public optional_data_base<Tp> {
 public:
   using optional_data_base<Tp>::optional_data_base;
-  optional_data() = default;
-  ~optional_data() = default;
 
-  optional_data(const optional_data& other)
+  optional_base(const optional_base& other)
       : optional_data_base<Tp>(other.engaged_, other.get()) {}
 
-  optional_data& operator=(const optional_data& other) {
+  optional_base& operator=(const optional_base& other) {
     this->copy_assign(other);
     return *this;
   }
 
-  optional_data(optional_data&& other)
+  optional_base(optional_base&& other)
       noexcept(std::is_nothrow_move_constructible<Tp> &&
                std::is_nothrow_move_assignable<Tp>)
       : optional_data_base<Tp>(other.engaged_, std::move(other.get())) {}
 
-  optional_data& operator=(optional_data&& other)
+  optional_base& operator=(optional_base&& other)
       noexcept(std::is_nothrow_move_constructible<Tp> &&
                std::is_nothrow_move_assignable<Tp>) {
     this->move_assign(std::move(other));
@@ -229,68 +202,37 @@ public:
 
 // optional_data with non-trivial destroy
 template<typename Tp, bool Copy, bool Move>
-class optional_data<Tp, false, Copy, Move>
-    : public optional_data<Tp, true, Copy, Move> {
+class optional_base<Tp, false, Copy, Move>
+    : public optional_base<Tp, true, Copy, Move> {
 public:
   using optional_data_base<Tp>::optional_data_base;
-  optional_data() = default;
-  ~optional_data() { this->reset(); }
-
-  optional_data(const optional_data&) = default;
-  optional_data& operator=(const optional_data&) = default;
-
-  optional_data(optional_data&&) = default;
-  optional_data& operator=(optional_data&&) = default;
+  ~optional_base() { this->reset(); }
 };
 
-// provided common operators for optional_base<T> to avoid repeating these
-// member functions in each specialization.
-template<typename Tp, typename Dp>
-class optional_base_impl {
-protected:
-  using store_type = std::remove_const<Tp>::type;
+template<typename Tp, typename Up>
+using converts_from_optional = std::integral_constant<
+  bool,
+  std::is_constructible<Tp, const optional<Up>&>::value  ||
+  std::is_constructible<Tp, optional<Up>&>::value        ||
+  std::is_constructible<Tp, const optional<Up>&&>::value ||
+  std::is_constructible<Tp, optional<Up>&&>::value       ||
+  std::is_convertible<const optional<Up>&, Tp>::value    ||
+  std::is_convertible<optional<Up>&, Tp>::value          ||
+  std::is_convertible<const optional<Up>&&, Tp>::value   ||
+  std::is_convertible<optional<Up>&&, Tp>::value
+>;
 
-  template<typename... Args>
-  constexpr void construct(Args&&... args)
-      noexcept(std::is_nothrow_constructible<store_type, Args...>) {
-    static_cast<Dp*>(this)->data_.construct(std::forward<Args>(args)...);
-  }
+template<typename Tp, typename Up>
+using assigns_from_optional = std::integral_constant<
+  bool,
+  std::is_assignable<Tp&, const optional<Up>&>::value    ||
+  std::is_assignable<Tp&, optional<Up>&>::value          ||
+  std::is_assignable<Tp&, const optional<Up>&&>::value   ||
+  std::is_assignable<Tp&, optional<Up>&&>::value
+>;
 
-  constexpr void destroy() noexcept {
-    static_cast<Dp*>(this)->data_.destroy();
-  }
 
-  constexpr void reset() noexcept {
-    static_cast<Dp*>(this)->data_.reset();
-  }
 
-  constexpr bool is_engaged() const noexcept {
-    return static_cast<Dp*>(this)->data_.is_engaged_;
-  }
-
-  constexpr Tp& get() noexcept {
-    return static_cast<Dp*>(this)->data_.value_;
-  }
-};
-
-template<
-  typename Tp,
-  bool = is_trivially_copy_assignable<Tp>::value,
-  bool = is_trivially_move_constructible<Tp>::value>
-class optional_base: public optional_base_impl<Tp, optional_base<Tp>> {
-public:
-  constexpr optional_base() = default;
-
-  template<
-      typename... Args,
-      typename = typenamem std::enable_if<
-          std::is_constructible<Tp, Args...>::value
-      >::type>
-  constexpr explicit optionial_base(in_place_t, Args&&... args)
-      : data_(in_place, std::forward<Args>(args)...) {}
-
-  optional_data<Tp> data_;
-};
 
 } // optional_internal
 

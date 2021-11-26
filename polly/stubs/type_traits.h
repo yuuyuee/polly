@@ -6,6 +6,51 @@
 #include "stubs/identity.h"
 
 namespace polly {
+template<typename...>
+struct Or;
+
+template<>
+struct Or<>: public std::false_type {};
+
+template<typename T1>
+struct Or<T1>: public T1 {};
+
+template<typename T1, typename T2>
+struct Or<T1, T2>: public std::conditional<T1::value, T1, T2>::type {};
+
+template<typename T1, typename T2, typename T3, typename... Tn>
+struct Or<T1, T2, T3, Tn...>
+    : public std::conditional<T1::value, T1, Or<T2, T3, Tn...>>::type {};
+
+template<typename...>
+struct And;
+
+template<>
+struct And<>: public std::true_type {};
+
+template<typename T1>
+struct And<T1>: public T1 {};
+
+template<typename T1, typename T2>
+struct And<T1, T2>: public std::conditional<T1::value, T2, T1>::type {};
+
+template<typename T1, typename T2, typename T3, typename... Tn>
+struct And<T1, T2, T3, Tn...>
+    : public std::conditional<T1::value, And<T2, T3, Tn...>, T1>::type {};
+
+template<typename Tp>
+struct Not: public std::integral_constant<bool, !Tp::value> {};
+
+template<typename... Tn>
+using Requires = typename enable_if<And<Tn...>::value, bool>::type;
+
+template<typename Tp>
+using remove_cvref =
+    std::remove_cv<typename std::remove_reference<Tp>::type>;
+
+template<typename Tp>
+using remove_cvref_t = typename remove_cvref<Tp>::type;
+
 namespace type_traits_internal {
 template<typename Tp>
 union SingleMemberUnion {
