@@ -100,24 +100,87 @@ private:
   using not_tag =  Not<std::is_same<in_place_t, remove_cvref_t<Up>>>
 public:
   using value_type = Tp;
-  using base = optional_base<Tp>
 
-  // constructor
+  // Constructs an optional object holding an empty value.
   constexpr optional() noexcept {}
 
+  // Constructs an optional object with `nullopt` holding an empty value.
   constexpr optional(nullopt_t) noexcept {}
 
-
-  optonal(const optionoal&) = default;
-  optional(optional&&) = default;
-
-
-  template<typename... Args>
-  constexpr explicit optional(in_place_t, Args&&...)
+  // Constructs an optional object direct initialized with `args`.
+  template<
+    typename... Args,
+    Requires<std::is_constructible<Tp, Args...>> = true
+  >
+  constexpr explicit optional(in_place_t, Args&&... args)
       noexcept(std::is_nothrow_constructible<Tp, Args...>::value)
-      : base(in_place, std::forward<Args>(args)...) {}
+      : optional_base<Tp>(in_place, std::forward<Args>(args)...) {}
 
-  // Converting constructor
+  //
+  template<
+    typename Up,
+    typename = Requires<
+      Not<std::is_same<Tp, Up>>,
+      std::is_constructible<Tp, const Up&>,
+      std::is_convertible<const Up&, Tp>,
+      Not<optional_internal::converts_from_optional<Tp, Up>>
+    >
+  >
+  optional(const optional<Up>& other)
+      noexcet(std::is_nothrow_constructible<Tp, const Up&>::value) {
+    if (other)
+      this->emplace(*other);
+  }
+
+  //
+  template<
+    typename Up,
+    typename = Requires<
+      Not<std::is_same<Tp, Up>>,
+      std::is_constructible<Tp, const Up&>,
+      Not<std::is_convertible<const Up&, Tp>>,
+      Not<optional_internal::converts_from_optional<Tp, Up>>
+    >
+  >
+  explicit optional(const optioanl<Up>& other)
+      noexcept(std::is_nothrow_constructible<Tp, const Up&>::value) {
+    if (other)
+      this->emplace(*other);
+  }
+
+  //
+  template<
+    typename Up,
+    typename = Requires<
+      Not<std::is_same<Tp, Up>>,
+      std::is_constructible<Tp, Up>,
+      std::is_convertible<Up, Tp>,
+      Not<optional_internal::converts_from_optional<Tp, Up>>
+    >
+  >
+  optional(optional<Up>&& other)
+      noexcet(std::is_nothrow_constructible<Tp, Up>::value) {
+    if (other)
+      this->emplace(std::move(*other));
+  }
+
+  //
+  template<
+    typename Up,
+    typename = Requires<
+      Not<std::is_same<Tp, Up>>,
+      std::is_constructible<Tp, Up>,
+      Not<std::is_convertible<Up, Tp>>,
+      Not<optional_internal::converts_from_optional<Tp, Up>>
+    >
+  >
+  optional(optioanl<Up>&& other)
+      noexcept(std::is_nothrow_constructible<Tp, Up>::value) {
+    if (other)
+      this->emplace(std::move(*other));
+  }
+
+  // Value constructor implicit
   template<
     typename Up = Tp,
     typename = Requires<
@@ -125,66 +188,157 @@ public:
       not_tag<Up>,
       std::is_constructible<Tp, Up>,
       std::is_convertiable<Up, Tp>
-    >>
-  constexpr optional(Up&& v)
+    >
+  >
+  constexpr optional(Up&& other)
       noexcept(std::is_nothrow_constructible<Tp, Up>::value)
-      : base(in_place, std::forward<Up>(v)) {}
+      : optional_base<Tp>(in_place, std::forward<Up>(other)) {}
 
+  // Value constructor explicit
   template<
     typename Up = Tp,
     typename = Requires<
-      Not<std::is_same<optional, remove_cvref_t<Tp>>>,
-      Not<std::is_same<in_place_t, remove_cvref_t<Tp>>>,
+      not_self<Up>,
+      not_tag<Up>,
       std::is_constructible<Tp, Up>,
       Not<std::is_convertiable<Up, Tp>>
-    >>
-  constexpr optional(Up&& v)
+    >
+  >
+  constexpr explicit optional(Up&& other)
       noexcept(std::is_nothrow_constructible<Tp, Up>::value)
-      : base(in_place, std::forward<Up>(v)) {}
-
-  // destructor
-  ~optional() = default;
+      : optional_base<Tp>(in_place, std::forward<Up>(other)) {}
 
   // assignment
-  optional& operator=(nullopt_t) noexcept;
-  optional& operator=(const optional&);
-  optional& operator=(optional&&) noexcept();
-  template<typename U = T>
-  optional& operator=(U&&);
-  template<typename U>
-  optional& operator=(const optional<U>&);
-  template<typename U>
-  optional& operator=(optional<U>&&);
+  optional& operator=(nullopt_t) noexcept { this->reset(); }
+
+  // Perfect forwarded assignment, depending on whether optional contains
+  // a value before the call, the contained value is either direct initialized
+  // from `std::forward<Up>` or assigned from `std::forward<Up>`.
+  template<typename Up = Tp>
+  typename std::enable_if<
+    not_self<Up>::value &&
+    !(std::is_scalar<Tp>::value ||
+      std::is_same<Tp, typename std::decay<Up>::type>::value) &&
+    std::is_constructible<Tp, Up>::value &&
+    std::is_assignable<Tp&, Up>::value,
+    optional&
+  >::type
+operator=(Up&& other)
+    noexcept(std::is_nothrow_constructible<Tp, Up>::value &&
+             std::is_nothrow_assignable<Tp&,  Up>::value) {
+  if (this->is_engaged()) {
+    this->get() = std::forward<Up>(other);
+  } else {
+    this->construct(std::forward<Up>(other));
+  }
+  return *this;
+}
+
+  template<typename Up>
+  typename std::enable_if<
+    !(std::is_same<Tp, Up>::value ||
+      std::is_constructible<Tp, const Up&>::value) &&
+    std::is_assignable<Tp&, const Up&>::value &&
+    !optional_internal::converts_from_optional<Tp, Up>::value &&
+    !optional_internal::assigns_from_optional<Tp, Up>::value,
+    optional&
+  >::type
+  operator=(const optional<Up>& other)
+      noexcet(std::is_nothrow_constructible<Tp, const Up&>::value &&
+              std::is_nothrow_assignable<Tp&,  const Up&>::value) {
+    if (other) {
+      if (this->engaged()) {
+        this->get() = *other;
+      } else {
+        this->construct(*other);
+      }
+    } else {
+      this->reset();
+    }
+  }
+
+  template<typename Up>
+  typename std::enable_if<
+    !(std::is_same<Tp, Up>::value ||
+      std::is_constructible<Tp, Up>::value) &&
+    std::is_assignable<Tp&, Up>::value &&
+    !optional_internal::converts_from_optional<Tp, Up>::value &&
+    !optional_internal::assigns_from_optional<Tp, Up>::value,
+    optional&
+  >::type
+  operator=(optional<Up>&& other)
+      noexcet(std::is_nothrow_constructible<Tp, Up>::value &&
+              std::is_nothrow_assignable<Tp&,  Up>::value) {
+    if (other) {
+      if (this->engaged()) {
+        this->get() = std::move(*other);
+      } else {
+        this->construct(std::move(*other));
+      }
+    } else {
+      this->reset();
+    }
+  }
+
+  // Constructs the contained value in place. if optional already contains
+  // a value before the call, the contained value is destroyed by calling
+  // its reset().
   template<typename... Args>
-  void emplace(Args&&...);
-  template<typename U, typename... Args>
-  void emplace(std::initializer_list<U>, Args&&...);
+  typename std::enable_if<
+      std::is_constructible<value_type, Args...>, value_type&>::type
+  emplace(Args&&...) noexcept(
+      std::is_nothrow_constructible<value_type, Args...>::value) {
+    this->reset();
+    this->construct(std::forward<Args>(args)...);
+    this->get();
+  }
 
   // swap
-  void swap(optional&) noexcept();
+  // Swaps the contents with those of other. if neither optional and
+  // nor other contains a value, the function has no effect. if only
+  // one of optional and other contains a value, the contained value
+  // of optional is direct initialized from other with move operator,
+  // followed by destruction of the contained value of other. After
+  // this call, other does not contain a value. if both optional and
+  // other contain values, the contained value are exchanged by callling
+  // `std::swap`, `Tp` lvalue must satisfy Swappable.
+  void swap(optional& other)
+      noexcept(std::is_nothrow_move_constructible<value_type>::value &&
+               std::is_nothrow_swappable<value_type>::value) {
+    if (this->is_engaged() && other.is_engaged()) {
+      std::swap(this->get(), other.get());
+    } else if (this->is_engaged()) {
+      other.construct(std::move(this->get()));
+      this->reset();
+    } else if (other.is_engaged()) {
+      this->construct(std::move(other.get()));
+      other.reset();
+    }
+  }
 
   // observers
 
-  // Accesses the contained value, returns a pointer to the contained value.
+  // Accesses the contained value, returns a pointer or reference to
+  // the contained value. This operator does not check whether the optional
+  // contains avalue.
   constexpr const T* operator->() const noexcept {
-    return (POLLY_ASSERT(this->is_engaged()), std::addressof(this->get()));
+    return POLLY_CONST_ASSERT(this->is_engaged()), std::addressof(this->get());
   }
 
   constexpr T* operator->() noexcept {
-    return (POLLY_ASSERT(this->is_engaged()), std::addressof(this->get()));
+    return POLLY_CONST_ASSERT(this->is_engaged()), std::addressof(this->get());
   }
 
-  // Accesses the contained value, returns a reference to the contained value.
   constexpr const T& operator*() const& {
-    return (POLLY_ASSERT(this->is_engaged()), this->get());
+    return POLLY_CONST_ASSERT(this->is_engaged()), this->get();
   }
 
   constexpr T& operator*() & {
-    return (POLLY_ASSERT(this->is_engaged()), this->get());
+    return POLLY_CONST_ASSERT(this->is_engaged()), this->get();
   }
 
   constexpr T&& operator*() && {
-    return (POLLY_ASSERT(this->is_engaged()), std::move(this->get()));
+    return POLLY_CONST_ASSERT(this->is_engaged()), std::move(this->get());
   }
 
   constexpr const T&& operator*() const&&;
@@ -251,7 +405,7 @@ public:
   // If optional contains a value, destroy that value as if by value().T::~T().
   // otherwise, there are no effects. optional does not contains a value after
   // this call.
-  using base::reset; // void reset() noexcept;
+  using optional_base<Tp>::reset; // void reset() noexcept;
 };
 } // namespace polly
 
