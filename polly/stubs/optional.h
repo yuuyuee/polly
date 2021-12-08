@@ -71,7 +71,7 @@ POLLY_INLINE_CONSTEXPR(nullopt_t, nullopt, nullopt_t::construct_tag{});
 // type is ill-formed. Alternatively, an optional of a reference_wrapper of type
 // T may be used to hold a reference. In addition, instantiates an optional
 // with the tag types nullopt_t or in_palce_t is iill-formed.
-template<typename Tp>
+template <typename Tp>
 class optional
     : private optional_internal::optional_base<Tp>,
       private enable_copy_move<
@@ -92,12 +92,14 @@ class optional
   static_assert(
       !std::is_reference<T>::value,
       "optional<reference> is not allowed.");
+
 private:
-  template<typename Up>
+  template <typename Up>
   using not_self =  Not<std::is_same<optional, remove_cvref_t<Up>>>;
 
-  template<typename Up>
+  template <typename Up>
   using not_tag =  Not<std::is_same<in_place_t, remove_cvref_t<Up>>>
+
 public:
   using value_type = Tp;
 
@@ -107,107 +109,163 @@ public:
   // Constructs an optional object with `nullopt` holding an empty value.
   constexpr optional(nullopt_t) noexcept {}
 
-  // Constructs an optional object direct initialized with `args`.
-  template<
-    typename... Args,
-    Requires<std::is_constructible<Tp, Args...>> = true
-  >
+  // Copy constructor
+  //optional(const optional&) = default;
+
+  // Move constructor
+  //optional(optional&&) = default;
+
+  // Constructs an optional object direct initialized from `args`. in_place_t
+  // is a tag used to indicate that the contained object should be constructed
+  // in place.
+  // The function does not participate in the overload resolution unless the
+  // following conditions are met:
+  // std::is_constructible<Tp, Args...>::value is true.
+  template <typename... Args, Requires<
+      std::is_constructible<Tp, Args...>> = true>
   constexpr explicit optional(in_place_t, Args&&... args)
       noexcept(std::is_nothrow_constructible<Tp, Args...>::value)
       : optional_base<Tp>(in_place, std::forward<Args>(args)...) {}
 
-  //
-  template<
-    typename Up,
-    typename = Requires<
-      Not<std::is_same<Tp, Up>>,
-      std::is_constructible<Tp, const Up&>,
-      std::is_convertible<const Up&, Tp>,
-      Not<optional_internal::converts_from_optional<Tp, Up>>
-    >
-  >
+  // Converting copy constructor conditionallly explicit.
+  // The function does not participate in the overload resolution unless the
+  // following conditions are met:
+  // 1. std::is_constructible<Tp, const Up&>::value is true.
+  // 2. Tp is not constructible or convertible from any expression of type
+  //    (possibly const) std::optional<Up>, i.e, the following 8 type traits
+  //    are all false:
+  //      1) std::is_constructible<Tp, std::optional<Up>&>::value
+  //      2) std::is_constructible<Tp, std::optional<Up>& const>::value
+  //      3) std::is_constructible<Tp, std::optional<Up>&&>::value
+  //      4) std::is_constructible<Tp, std::optional<Up>&& const>::value
+  //      5) std::is_convertible<std::optional<Up>&, Tp>::value
+  //      6) std::is_convertible<std::optional<Up>& const, Tp>::value
+  //      7) std::is_convertible<std::optional<Up>&&, Tp>::value
+  //      8) std::is_convertible<std::optional<Up>&& const, Tp>::value
+
+#define POLLY_OPT_REQ_IMPLICIT_CONVERT_COPY_CTOR(Tp, Up)      \
+  Requires<                                                   \
+      Not<std::is_same<Tp, Up>>,                              \
+      std::is_constructible<Tp, const Up&>,                   \
+      std::is_convertible<const Up&, Tp>,                     \
+      Not<optional_internal::converts_from_optional<Tp, Up>>  \
+  > = true
+
+#define POLLY_OPT_REQ_EXPLICIT_CONVERT_COPY_CTOR(Tp, Up)      \
+  Requires<                                                   \
+      Not<std::is_same<Tp, Up>>,                              \
+      std::is_constructible<Tp, const Up&>,                   \
+      Not<std::is_convertible<const Up&, Tp>>,                \
+      Not<optional_internal::converts_from_optional<Tp, Up>>  \
+  > = true
+
+  // Converting copy constructor implicit.
+  template <typename Up, POLLY_OPT_REQ_IMPLICIT_CONVERT_COPY_CTOR(Tp, Up)>
   optional(const optional<Up>& other)
       noexcet(std::is_nothrow_constructible<Tp, const Up&>::value) {
     if (other)
       this->emplace(*other);
   }
 
-  //
-  template<
-    typename Up,
-    typename = Requires<
-      Not<std::is_same<Tp, Up>>,
-      std::is_constructible<Tp, const Up&>,
-      Not<std::is_convertible<const Up&, Tp>>,
-      Not<optional_internal::converts_from_optional<Tp, Up>>
-    >
-  >
+  // Converting copy constructor explicit.
+  template <typename Up, POLLY_OPT_REQ_EXPLICIT_CONVERT_COPY_CTOR(Tp, Up)>
   explicit optional(const optioanl<Up>& other)
       noexcept(std::is_nothrow_constructible<Tp, const Up&>::value) {
     if (other)
       this->emplace(*other);
   }
 
-  //
-  template<
-    typename Up,
-    typename = Requires<
-      Not<std::is_same<Tp, Up>>,
-      std::is_constructible<Tp, Up>,
-      std::is_convertible<Up, Tp>,
-      Not<optional_internal::converts_from_optional<Tp, Up>>
-    >
-  >
+  // Converting move constructor conditionallly explicit.
+  // The function does not participate in the overload resolution unless the
+  // following conditions are met:
+  // 1. std::is_constructible<Tp, Up&&>::value is true.
+  // 2. Tp is not constructible or convertible from any expression of type
+  //    (possibly const) std::optional<Up>, i.e, the following 8 type traits
+  //    are all false:
+  //      1) std::is_constructible<Tp, std::optional<Up>&>::value
+  //      2) std::is_constructible<Tp, std::optional<Up>& const>::value
+  //      3) std::is_constructible<Tp, std::optional<Up>&&>::value
+  //      4) std::is_constructible<Tp, std::optional<Up>&& const>::value
+  //      5) std::is_convertible<std::optional<Up>&, Tp>::value
+  //      6) std::is_convertible<std::optional<Up>& const, Tp>::value
+  //      7) std::is_convertible<std::optional<Up>&&, Tp>::value
+  //      8) std::is_convertible<std::optional<Up>&& const, Tp>::value
+  // This constructor is explicit if and only if std::is_convertible<const Up&, Tp>
+  // is false.
+
+#define POLLY_OPT_REQ_IMPLICIT_CONVERT_MOVE_CTOR(Tp, Up)      \
+  Requires<                                                   \
+      Not<std::is_same<Tp, Up>>,                              \
+      std::is_constructible<Tp, Up>,                          \
+      std::is_convertible<Up, Tp>,                            \
+      Not<optional_internal::converts_from_optional<Tp, Up>>  \
+  > = true
+
+#define POLLY_OPT_REQ_EXPLICIT_CONVERT_MOVE_CTOR(Tp, Up)      \
+  Requires<                                                   \
+      Not<std::is_same<Tp, Up>>,                              \
+      std::is_constructible<Tp, Up>,                          \
+      Not<std::is_convertible<Up, Tp>>,                       \
+      Not<optional_internal::converts_from_optional<Tp, Up>>  \
+  > = true
+
+  // Converting move constructor.
+  template <typename Up, POLLY_OPT_REQ_IMPLICIT_CONVERT_MOVE_CTOR(Tp, Up)>
   optional(optional<Up>&& other)
       noexcet(std::is_nothrow_constructible<Tp, Up>::value) {
     if (other)
       this->emplace(std::move(*other));
   }
 
-  //
-  template<
-    typename Up,
-    typename = Requires<
-      Not<std::is_same<Tp, Up>>,
-      std::is_constructible<Tp, Up>,
-      Not<std::is_convertible<Up, Tp>>,
-      Not<optional_internal::converts_from_optional<Tp, Up>>
-    >
-  >
-  optional(optioanl<Up>&& other)
+  // Converting move constructor.
+  template<typename Up, POLLY_OPT_REQ_EXPLICIT_CONVERT_MOVE_CTOR(Tp, Up)>
+  explicit optional(optioanl<Up>&& other)
       noexcept(std::is_nothrow_constructible<Tp, Up>::value) {
     if (other)
       this->emplace(std::move(*other));
   }
 
-  // Value constructor implicit
-  template<
-    typename Up = Tp,
-    typename = Requires<
-      not_self<Up>,
-      not_tag<Up>,
-      std::is_constructible<Tp, Up>,
-      std::is_convertiable<Up, Tp>
-    >
-  >
+  // Constructs an optional object from object of type Tp (where Tp = value_type)
+  // with the expression `std::forward<Up>(value)`.
+  // The function does not participate in the overload resolution unless the
+  // following conditions are met:
+  // 1. std::is_constructible<Tp, Up&&>::value is true
+  // 2. std::decay<U>::type, std::remove_cvref<U>::type is neither std::in_place_t
+  //    nor std::optional<Tp>
+  // This constructor is explicit if and only if std::is_convertible<Up&&, Tp> is
+  // false.
+  // This constructor is explicit if and only if std::is_convertible<Up&&, Tp>
+  // is false.
+
+#define POLLY_OPT_REQ_IMPLICIT_VALUE_CTOR(Tp, Up)             \
+  Requires<                                                   \
+      not_self<Up>,                                           \
+      not_tag<Up>,                                            \
+      std::is_constructible<Tp, Up>,                          \
+      std::is_convertiable<Up, Tp>                            \
+  > = true
+
+#define POLLY_OPT_REQ_EXPLICIT_VALUE_CTOR(Tp, Up)             \
+  Requires<                                                   \
+      not_self<Up>,                                           \
+      not_tag<Up>,                                            \
+      std::is_constructible<Tp, Up>,                          \
+      Not<std::is_convertiable<Up, Tp>>                       \
+  > = true
+
+  // Value constructor.
+  template <typename Up = Tp, POLLY_OPT_REQ_IMPLICIT_VALUE_CTOR(Tp, Up)>
   constexpr optional(Up&& other)
       noexcept(std::is_nothrow_constructible<Tp, Up>::value)
       : optional_base<Tp>(in_place, std::forward<Up>(other)) {}
 
-  // Value constructor explicit
-  template<
-    typename Up = Tp,
-    typename = Requires<
-      not_self<Up>,
-      not_tag<Up>,
-      std::is_constructible<Tp, Up>,
-      Not<std::is_convertiable<Up, Tp>>
-    >
-  >
+  // Value constructor.
+  template <typename Up = Tp, POLLY_OPT_REQ_EXPLICIT_VALUE_CTOR(Tp, Up)>
   constexpr explicit optional(Up&& other)
       noexcept(std::is_nothrow_constructible<Tp, Up>::value)
       : optional_base<Tp>(in_place, std::forward<Up>(other)) {}
 
+////////////////////////////////////////////////////////////////////////////
   // assignment
   optional& operator=(nullopt_t) noexcept { this->reset(); }
 
@@ -223,16 +281,16 @@ public:
     std::is_assignable<Tp&, Up>::value,
     optional&
   >::type
-operator=(Up&& other)
-    noexcept(std::is_nothrow_constructible<Tp, Up>::value &&
-             std::is_nothrow_assignable<Tp&,  Up>::value) {
-  if (this->is_engaged()) {
-    this->get() = std::forward<Up>(other);
-  } else {
-    this->construct(std::forward<Up>(other));
+  operator=(Up&& other)
+      noexcept(std::is_nothrow_constructible<Tp, Up>::value &&
+               std::is_nothrow_assignable<Tp&,  Up>::value) {
+    if (this->is_engaged()) {
+      this->get() = std::forward<Up>(other);
+    } else {
+      this->construct(std::forward<Up>(other));
+    }
+    return *this;
   }
-  return *this;
-}
 
   template<typename Up>
   typename std::enable_if<
@@ -290,7 +348,7 @@ operator=(Up&& other)
       std::is_nothrow_constructible<value_type, Args...>::value) {
     this->reset();
     this->construct(std::forward<Args>(args)...);
-    this->get();
+    return this->get();
   }
 
   // swap

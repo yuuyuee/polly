@@ -5,9 +5,10 @@
 #include "stubs/assert.h"
 
 namespace polly {
-template<typename Tp>
+template <typename Tp>
 class optional;
 
+namespace optional {
 namespace optional_internal {
 
 struct empty_type {};
@@ -15,7 +16,7 @@ struct empty_type {};
 // This class stores the data in optional<T>.
 // It is specialized based on whether T is trivially destructible.
 // This is the specialization for trivially destructible type.
-template<typename Tp, bool = std::is_trivially_destructible<Tp>::type>
+template <typename Tp, bool = std::is_trivially_destructible<Tp>::type>
 class optional_data_dtor_impl {
 protected:
   void destroy() noexcept {
@@ -30,7 +31,7 @@ protected:
 };
 
 // This is the specialization for non trivially destructible type.
-template<typename Tp>
+template <typename Tp>
 class optional_data_dtor_impl<Tp, false> {
 protected:
   ~optional_data_destructor_impl() {}
@@ -51,7 +52,8 @@ protected:
 
 // THis class template manages constructioin/destruction/assignment of
 // the contained value for a polly::optional.
-template<typename Tp, typename store_type = typename std::remove_const<Tp>::type>
+template <typename Tp,
+          typename store_type = typename std::remove_const<Tp>::type>
 class optional_data_base: public optional_data_dtor_impl<store_type> {
 protected:
   using optional_data_dtor_base<store_type>::optional_data_dtor_base;
@@ -116,20 +118,20 @@ protected:
   constexpr bool is_engaged() const noexcept { return this->engaged_; }
 };
 
-template<typename Tp,
-        // has trivially destructor
-        bool = std::is_trivially_destructible<Tp>::value,
-        // has trivially copy assignment&constructor
-        bool = polly::is_trivially_copy_assignable<Tp>::value &&
+template <typename Tp,
+          // has trivially destructor
+          bool = std::is_trivially_destructible<Tp>::value,
+          // has trivially copy assignment&constructor
+          bool = polly::is_trivially_copy_assignable<Tp>::value &&
               polly::is_trivially_copy_constructible<Tp>::value,
-        // has trivially move assignment&constructor
-        bool = polly::is_trivially_move_assignable<Tp>::value &&
+          // has trivially move assignment&constructor
+          bool = polly::is_trivially_move_assignable<Tp>::value &&
               polly::is_trivially_move_constructible<Tp>::value
   >
 class optional_base;
 
 // optional_data with trivial destroy, copy and move.
-template<typename Tp>
+template <typename Tp>
 class optional_base<Tp, true, true, true>
     : public optional_data_base<Tp> {
 public:
@@ -137,7 +139,7 @@ public:
 };
 
 // optional_data with non-trivial copy construction and assignment.
-template<typename Tp>
+template <typename Tp>
 class optional_base<Tp, true, false, true>
     : public optional_data_base<Tp> {
 public:
@@ -153,7 +155,7 @@ public:
 };
 
 // optional_data with non-trivial move construction and assignment.
-template<typename Tp>
+template <typename Tp>
 class optional_base<Tp, true, true, false>
     : public optional_data_base<Tp> {
 public:
@@ -173,7 +175,7 @@ public:
 };
 
 // optional_data with non-trivial copy/move construction and assignment.
-template<typename Tp>
+template <typename Tp>
 class optional_base<Tp, true, false, false>
     : public optional_data_base<Tp> {
 public:
@@ -201,7 +203,7 @@ public:
 };
 
 // optional_data with non-trivial destroy
-template<typename Tp, bool Copy, bool Move>
+template <typename Tp, bool Copy, bool Move>
 class optional_base<Tp, false, Copy, Move>
     : public optional_base<Tp, true, Copy, Move> {
 public:
@@ -209,7 +211,7 @@ public:
   ~optional_base() { this->reset(); }
 };
 
-template<typename Tp, typename Up>
+template <typename Tp, typename Up>
 using converts_from_optional = std::integral_constant<
   bool,
   std::is_constructible<Tp, const optional<Up>&>::value  ||
@@ -222,7 +224,7 @@ using converts_from_optional = std::integral_constant<
   std::is_convertible<optional<Up>&&, Tp>::value
 >;
 
-template<typename Tp, typename Up>
+template <typename Tp, typename Up>
 using assigns_from_optional = std::integral_constant<
   bool,
   std::is_assignable<Tp&, const optional<Up>&>::value    ||
@@ -231,10 +233,6 @@ using assigns_from_optional = std::integral_constant<
   std::is_assignable<Tp&, optional<Up>&&>::value
 >;
 
-
-
-
 } // optional_internal
-
-
+} // optional
 } // namespace polly
