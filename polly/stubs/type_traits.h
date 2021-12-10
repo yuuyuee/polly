@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <utility> // std::swap
 
 #include "stubs/config.h"
 #include "stubs/identity.h"
@@ -42,7 +43,7 @@ template <typename Tp>
 struct Not: public std::integral_constant<bool, !Tp::value> {};
 
 template <typename... Tn>
-using Requires = typename enable_if<And<Tn...>::value, bool>::type;
+using Requires = typename std::enable_if<And<Tn...>::value, bool>::type;
 
 template<typename Tp>
 using remove_cvref =
@@ -103,7 +104,7 @@ struct is_trivially_move_constructible
       typename std::is_lvalue_reference<Tp>::type
     >::type {
 #if defined(POLLY_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE)
- private:
+private:
   static constexpr bool compliant =
       std::is_trivially_move_constructible<Tp>::value ==
       is_trivially_move_constructible::value;
@@ -140,7 +141,7 @@ struct is_trivially_copy_assignable
         __has_trivial_assign(typename std::remove_reference<Tp>::type) &&
         std::is_copy_assignable<Tp>::value> {
 #if defined(POLLY_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE)
- private:
+private:
   static constexpr bool compliant =
       std::is_trivially_copy_assignable<Tp>::value ==
       is_trivially_copy_assignable::value;
@@ -163,7 +164,7 @@ struct is_trivially_move_assignable
         typename std::is_move_assignable<type_traits_internal::SingleMemberUnion<Tp>>::type,
         typename type_traits_internal::is_trivially_move_assignable_reference<Tp>::type>::type {
 #if defined(POLLY_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE)
- private:
+private:
   static constexpr bool compliant =
       std::is_trivially_move_assignable<Tp>::value ==
       is_trivially_move_assignable::value;
@@ -176,7 +177,34 @@ struct is_trivially_move_assignable
 #endif  // POLLY_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
 };
 
+namespace type_traits_internal {
+template <typename...>
+struct Void { using type = void; };
 
+template <typename Tag, template <typename...> class Op, typename... Args>
+struct is_detected_impl {
+  using type = std::false_type;
+};
 
+template <template <typename...> class Op, typename... Args>
+struct is_detected_impl<typename Void<Op<Args...>>::type, Op, Args...> {
+  using type = std::true_type;
+};
 
+template <template <typename...> class Op, typename... Args>
+struct is_detected: is_detected_impl<void, Op, Args...>::type {};
+
+template <typename Tp>
+using swap_fn =
+    decltype(std::swap(std::declval<Tp&>(), std::declval<Tp&>()));
+
+} // namespace type_traits_internal
+
+template <typename Tp>
+struct is_swappable:
+    type_traits_internal::is_detected<type_traits_internal::swap_fn, Tp> {};
+
+template <typename Tp>
+struct is_nothrow_swappable:
+    public std::integral_constant<bool, noexcept(std::swap(std::declval<Tp&>(), std::declval<Tp&>()))> {};
 } // namespace polly

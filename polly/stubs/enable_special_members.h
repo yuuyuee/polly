@@ -8,14 +8,18 @@ struct enable_default_constructor_tag {
 template<bool Switch, typename Tag = void>
 struct enable_default_constructor {
   constexpr enable_default_constructor() noexcept = default;
+
   constexpr enable_default_constructor(
       const enable_default_constructor&) noexcept = default;
+
   constexpr enable_default_constructor(
       enable_default_constructor&&) noexcept = default;
+
   enable_default_constructor& operator=(
       const enable_default_constructor&) noexcept = default;
+
   enable_default_constructor& operator=(
-      const enable_default_constructor&) noexcept = default;
+      enable_default_constructor&&) noexcept = default;
 
   constexpr explicit enable_default_constructor(
     enable_default_constructor_tag)  {}
@@ -53,7 +57,7 @@ struct enable_default_constructor<false, Tag> {
   enable_default_constructor& operator=(
       const enable_default_constructor&) noexcept = delete;
   enable_default_constructor& operator=(
-      const enable_default_constructor&) noexcept = delete;
+      enable_default_constructor&&) noexcept = delete;
 
   constexpr explicit enable_default_constructor(
     enable_default_constructor_tag)  {}
@@ -77,8 +81,8 @@ template<typename Tag>
 struct enable_copy_move<true, false, true, true, Tag> {
   constexpr enable_copy_move() noexcept                         = default;
   constexpr enable_copy_move(const enable_copy_move&) noexcept  = default;
-  constexpr enable_copy_move(enable_copy_move&&) noexcept       = delete;
-  enable_copy_move& operator=(const enable_copy_move&) noexcept = default;
+  constexpr enable_copy_move(enable_copy_move&&) noexcept       = default;
+  enable_copy_move& operator=(const enable_copy_move&) noexcept = delete;
   enable_copy_move& operator=(enable_copy_move&&) noexcept      = default;
 };
 
@@ -86,8 +90,8 @@ template<typename Tag>
 struct enable_copy_move<false, false, true, true, Tag> {
   constexpr enable_copy_move() noexcept                         = default;
   constexpr enable_copy_move(const enable_copy_move&) noexcept  = delete;
-  constexpr enable_copy_move(enable_copy_move&&) noexcept       = delete;
-  enable_copy_move& operator=(const enable_copy_move&) noexcept = default;
+  constexpr enable_copy_move(enable_copy_move&&) noexcept       = default;
+  enable_copy_move& operator=(const enable_copy_move&) noexcept = delete;
   enable_copy_move& operator=(enable_copy_move&&) noexcept      = default;
 };
 
@@ -95,8 +99,8 @@ template<typename Tag>
 struct enable_copy_move<true, true, false, true, Tag> {
   constexpr enable_copy_move() noexcept                         = default;
   constexpr enable_copy_move(const enable_copy_move&) noexcept  = default;
-  constexpr enable_copy_move(enable_copy_move&&) noexcept       = default;
-  enable_copy_move& operator=(const enable_copy_move&) noexcept = delete;
+  constexpr enable_copy_move(enable_copy_move&&) noexcept       = delete;
+  enable_copy_move& operator=(const enable_copy_move&) noexcept = default;
   enable_copy_move& operator=(enable_copy_move&&) noexcept      = default;
 };
 
@@ -104,8 +108,8 @@ template<typename Tag>
 struct enable_copy_move<false, true, false, true, Tag> {
   constexpr enable_copy_move() noexcept                         = default;
   constexpr enable_copy_move(const enable_copy_move&) noexcept  = delete;
-  constexpr enable_copy_move(enable_copy_move&&) noexcept       = default;
-  enable_copy_move& operator=(const enable_copy_move&) noexcept = delete;
+  constexpr enable_copy_move(enable_copy_move&&) noexcept       = delete;
+  enable_copy_move& operator=(const enable_copy_move&) noexcept = default;
   enable_copy_move& operator=(enable_copy_move&&) noexcept      = default;
 };
 
@@ -121,9 +125,9 @@ struct enable_copy_move<true, false, false, true, Tag> {
 template<typename Tag>
 struct enable_copy_move<false, false, false, true, Tag> {
   constexpr enable_copy_move() noexcept                         = default;
-  constexpr enable_copy_move(const enable_copy_move&) noexcept  = default;
-  constexpr enable_copy_move(enable_copy_move&&) noexcept       = default;
-  enable_copy_move& operator=(const enable_copy_move&) noexcept = default;
+  constexpr enable_copy_move(const enable_copy_move&) noexcept  = delete;
+  constexpr enable_copy_move(enable_copy_move&&) noexcept       = delete;
+  enable_copy_move& operator=(const enable_copy_move&) noexcept = delete;
   enable_copy_move& operator=(enable_copy_move&&) noexcept      = default;
 };
 
@@ -149,8 +153,8 @@ template<typename Tag>
 struct enable_copy_move<true, false, true, false, Tag> {
   constexpr enable_copy_move() noexcept                         = default;
   constexpr enable_copy_move(const enable_copy_move&) noexcept  = default;
-  constexpr enable_copy_move(enable_copy_move&&) noexcept       = delete;
-  enable_copy_move& operator=(const enable_copy_move&) noexcept = default;
+  constexpr enable_copy_move(enable_copy_move&&) noexcept       = default;
+  enable_copy_move& operator=(const enable_copy_move&) noexcept = delete;
   enable_copy_move& operator=(enable_copy_move&&) noexcept      = delete;
 };
 
@@ -158,8 +162,8 @@ template<typename Tag>
 struct enable_copy_move<false, false, true, false, Tag> {
   constexpr enable_copy_move() noexcept                         = default;
   constexpr enable_copy_move(const enable_copy_move&) noexcept  = delete;
-  constexpr enable_copy_move(enable_copy_move&&) noexcept       = delete;
-  enable_copy_move& operator=(const enable_copy_move&) noexcept = default;
+  constexpr enable_copy_move(enable_copy_move&&) noexcept       = default;
+  enable_copy_move& operator=(const enable_copy_move&) noexcept = delete;
   enable_copy_move& operator=(enable_copy_move&&) noexcept      = delete;
 };
 
@@ -167,8 +171,8 @@ template<typename Tag>
 struct enable_copy_move<true, true, false, false, Tag> {
   constexpr enable_copy_move() noexcept                         = default;
   constexpr enable_copy_move(const enable_copy_move&) noexcept  = default;
-  constexpr enable_copy_move(enable_copy_move&&) noexcept       = default;
-  enable_copy_move& operator=(const enable_copy_move&) noexcept = delete;
+  constexpr enable_copy_move(enable_copy_move&&) noexcept       = delete;
+  enable_copy_move& operator=(const enable_copy_move&) noexcept = default;
   enable_copy_move& operator=(enable_copy_move&&) noexcept      = delete;
 };
 
@@ -176,8 +180,8 @@ template<typename Tag>
 struct enable_copy_move<false, true, false, false, Tag> {
   constexpr enable_copy_move() noexcept                         = default;
   constexpr enable_copy_move(const enable_copy_move&) noexcept  = delete;
-  constexpr enable_copy_move(enable_copy_move&&) noexcept       = default;
-  enable_copy_move& operator=(const enable_copy_move&) noexcept = delete;
+  constexpr enable_copy_move(enable_copy_move&&) noexcept       = delete;
+  enable_copy_move& operator=(const enable_copy_move&) noexcept = default;
   enable_copy_move& operator=(enable_copy_move&&) noexcept      = delete;
 };
 
@@ -198,6 +202,5 @@ struct enable_copy_move<false, false, false, false, Tag> {
   enable_copy_move& operator=(const enable_copy_move&) noexcept = delete;
   enable_copy_move& operator=(enable_copy_move&&) noexcept      = delete;
 };
-
 
 } // namespace polly

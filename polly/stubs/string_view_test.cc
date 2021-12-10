@@ -1,7 +1,7 @@
+#include "stubs/string_view.h"
 #include <map>
 #include <stdexcept>
 
-#include "stubs/string_view.h"
 #include "stubs/macros.h"
 #include "gtest/gtest.h"
 
