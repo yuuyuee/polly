@@ -48,7 +48,7 @@ struct Listenable {
   Listenable() { ++listener->construct0; }
   explicit Listenable(int /*unused*/) { ++listener->construct1; }
   Listenable(int /*unused*/, int /*unused*/) { ++listener->construct2; }
-  Listenable(std::initializer_list<int> /*unused*/) { ++listener->listinit; }
+  //Listenable(std::initializer_list<int> /*unused*/) { ++listener->listinit; }
   Listenable(const Listenable& /*unused*/) { ++listener->copy; }
   Listenable(const volatile Listenable& /*unused*/) {
     ++listener->volatile_copy;

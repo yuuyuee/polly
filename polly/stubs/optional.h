@@ -108,13 +108,11 @@ public:
   // Constructs an optional object with `nullopt` holding an empty value.
   constexpr optional(nullopt_t) noexcept {}
 
-#if 1
   // Copy constructor
   optional(const optional&) = default;
 
   // Move constructor
   optional(optional&&) = default;
-#endif
 
   // Constructs an optional object direct initialized from `args`. in_place_t
   // is a tag used to indicate that the contained object should be constructed

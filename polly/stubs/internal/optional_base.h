@@ -238,7 +238,7 @@ template <typename Tp, bool Copy, bool Move>
 class optional_base<Tp, false, Copy, Move>
     : public optional_base<Tp, true, Copy, Move> {
 public:
-  using optional_data_base<Tp>::optional_data_base;
+  using optional_base<Tp, true, false, false>::optional_base;
 
   optional_base() = default;
   optional_base(const optional_base&) = default;
