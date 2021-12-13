@@ -24,19 +24,26 @@ protected:
   constexpr optional_data_base(in_place_t tag, Args&&... args)
       :  engaged_(true), payload_(tag, std::forward<Args>(args)...) {}
 
-  // non-trivial copy constructor
+  // Copy/move constructor is only used to when the contained value is
+  // trivially copy constructible.
+  optional_data_base(const optional_data_base&) = default;
+  optional_data_base(optional_data_base&&) = default;
+  optional_data_base& operator=(const optional_data_base&) = default;
+  optional_data_base& operator=(optional_data_base&&) = default;
+
+  // Used to perform non-trivial copy constructor.
   optional_data_base(bool, const optional_data_base& other) {
     if (other.engaged_)
       construct(other.payload_.value_);
   }
 
-  // no-trivial move constructor
+  // Used to perform non-trivial move constructor.
   optional_data_base(bool, optional_data_base&& other) {
     if (other.engaged_)
       construct(std::move(other.payload_.value_));
   }
 
-  // non-trivial copy assignment
+  // Used to perform non-trivial copy assignment constructor.
   void copy_assign(const optional_data_base& other) {
     if (engaged_ && other.engaged_) {
       payload_.value_ = other.payload_.value_;
@@ -49,7 +56,7 @@ protected:
     }
   }
 
-  // non-trivial move assignment
+  // Used to perform non-trivial move assignment constructor.
   void move_assign(optional_data_base&& other)
       noexcept(std::is_nothrow_move_constructible<Tp>::value &&
                std::is_nothrow_move_assignable<Tp>::value) {
@@ -86,7 +93,6 @@ protected:
       destroy();
   }
 
-private:
   bool engaged_{false};
 
   struct Empty {};
@@ -161,12 +167,12 @@ public:
 
   optional_base() = default;
   ~optional_base() = default;
-  optional_base(const optional_base&) = default;
+  //optional_base(const optional_base&) = default;
   optional_base(optional_base&&) = default;
   optional_base& operator=(optional_base&&) = default;
 
-  //optional_base(const optional_base& other)
-  //    : optional_data_base<Tp>(other.engaged_, other) {}
+  optional_base(const optional_base& other)
+      : optional_data_base<Tp>(other.engaged_, other) {}
 
   optional_base& operator=(const optional_base& other) {
     this->copy_assign(other);
@@ -185,12 +191,12 @@ public:
   ~optional_base() = default;
   optional_base(const optional_base&) = default;
   optional_base& operator=(const optional_base&) = default;
-  optional_base(optional_base&&) = default;
+  //optional_base(optional_base&&) = default;
 
-  //optional_base(optional_base&& other)
-  //    noexcept(std::is_nothrow_move_constructible<Tp>::value &&
-  //             std::is_nothrow_move_assignable<Tp>::value)
-  //    : optional_data_base<Tp>(other.engaged_, std::move(other.get())) {}
+  optional_base(optional_base&& other)
+      noexcept(std::is_nothrow_move_constructible<Tp>::value &&
+               std::is_nothrow_move_assignable<Tp>::value)
+      : optional_data_base<Tp>(other.is_engaged(), std::move(other)) {}
 
   optional_base& operator=(optional_base&& other)
       noexcept(std::is_nothrow_move_constructible<Tp>::value &&
@@ -209,21 +215,21 @@ public:
 
   optional_base() = default;
   ~optional_base() = default;
-  optional_base(const optional_base&) = default;
-  optional_base(optional_base&&) = default;
+  //optional_base(const optional_base&) = default;
+  //optional_base(optional_base&&) = default;
 
-  //optional_base(const optional_base& other)
-  //    : optional_data_base<Tp>(other.engaged_, other.get()) {}
+  optional_base(const optional_base& other)
+      : optional_data_base<Tp>(other.is_engaged(), other) {}
 
   optional_base& operator=(const optional_base& other) {
     this->copy_assign(other);
     return *this;
   }
 
-  //optional_base(optional_base&& other)
-  //    noexcept(std::is_nothrow_move_constructible<Tp>::value &&
-  //             std::is_nothrow_move_assignable<Tp>::value)
-  //    : optional_data_base<Tp>(other.engaged_, std::move(other.get())) {}
+  optional_base(optional_base&& other)
+      noexcept(std::is_nothrow_move_constructible<Tp>::value &&
+               std::is_nothrow_move_assignable<Tp>::value)
+      : optional_data_base<Tp>(other.is_engaged(), std::move(other)) {}
 
   optional_base& operator=(optional_base&& other)
       noexcept(std::is_nothrow_move_constructible<Tp>::value &&
@@ -244,7 +250,7 @@ public:
   optional_base(const optional_base&) = default;
   optional_base(optional_base&&) = default;
   optional_base& operator=(optional_base&&) = default;
-  optional_base& operator=(const optional_base& other) = default;
+  optional_base& operator=(const optional_base&) = default;
 
   ~optional_base() { this->reset(); }
 };
@@ -286,17 +292,20 @@ struct optional_hash_base {
   optional_hash_base& operator=(optional_hash_base&&) = delete;
 };
 
-#define POLLY_OPT_PARM_HASH                             \
-  std::hash<typename std::remove_const<Tp>::type>()(    \
-      std::declval<std::remove_const<Tp>::type>())
+#define POLLY_OPT_HASH_FN                           \
+  std::hash<typename std::remove_const<Tp>::type>{} \
+      (std::declval<typename std::remove_const<Tp>::type>())
 
 template <typename Tp>
-struct optional_hash_base<Tp, decltype(POLLY_OPT_PARM_HASH)> {
-  using argument_type = optional<Tp>;
+struct optional_hash_base<Tp, decltype(POLLY_OPT_HASH_FN)> {
+  using argument_type = polly::optional<Tp>;
   using result_type = size_t;
-  size_t operator()(const optional<Tp>& opt) const {
+
+  size_t operator()(const optional<Tp>& opt)
+      const noexcept(noexcept(POLLY_OPT_HASH_FN)) {
+    constexpr size_t kMgicDisengagedHash = static_cast<size_t>(-3333);
     return opt ? std::hash<typename std::remove_const<Tp>::type>{}(*opt)
-               : static_cast<size_t>(-3333);
+               : kMgicDisengagedHash;
   }
 };
 

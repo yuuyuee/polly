@@ -17,6 +17,7 @@ using std::nullopt;
 
 #include <initializer_list>
 #include <type_traits>
+#include <functional>
 
 #include "stubs/attributes.h"
 #include "stubs/macros.h"
@@ -73,7 +74,7 @@ POLLY_INLINE_CONSTEXPR(nullopt_t, nullopt, nullopt_t::construct_tag{});
 // with the tag types nullopt_t or in_palce_t is iill-formed.
 template <typename Tp>
 class optional
-    : private optional_internal::optional_base<Tp>,
+    : private optional_internal::optional_base<Tp>/*,
       private enable_copy_move<
         std::is_copy_constructible<Tp>::value,    // Copy
         std::is_copy_constructible<Tp>::value &&  // Copy assignment
@@ -82,7 +83,7 @@ class optional
         std::is_move_constructible<Tp>::value &&  // Move assignment
         std::is_move_assignable<Tp>::value,
         optional<Tp>                              // Unique tag type
-      > {
+      > */{
   static_assert(
       !std::is_same<nullopt_t, typename std::remove_cv<Tp>::type>::value,
       "optional<nullopt_t> is not allowed.");
@@ -471,7 +472,7 @@ public:
   // Tp must meet the requirements of CopyConstructible.
   // Up&& must be convertible to T.
   template <typename Up>
-  constexpr Tp value_or(Up&& default_value) const& {
+  constexpr const Tp value_or(Up&& default_value) const& {
     static_assert(std::is_copy_constructible<Tp>::value,
                   "optional<Tp>::value_or: Tp must be copy constructible");
     static_assert(std::is_convertible<Up&&, Tp>::value,
@@ -485,7 +486,7 @@ public:
   // Tp must meet the requirements of MoveConstructible, Up&& must be convertible
   // to value_type.
   template <typename Up>
-  constexpr Tp value_or(Up&& default_value) && {
+  Tp value_or(Up&& default_value) && {
     static_assert(std::is_move_constructible<Tp>::value,
                   "optional<Tp>::value_or: Tp must be copy constructible");
     static_assert(std::is_convertible<Up&&, Tp>::value,
@@ -603,7 +604,7 @@ constexpr bool operator!=(nullopt_t, const optional<Tp>& opt) noexcept {
 }
 
 template <typename Tp>
-constexpr bool operator<(const optional<Tp>& /* opt */, nullopt_t) noexcept {
+constexpr bool operator<(const optional<Tp>&, nullopt_t) noexcept {
   return false;
 }
 
@@ -618,7 +619,7 @@ constexpr bool operator<=(const optional<Tp>& opt, nullopt_t) noexcept {
 }
 
 template <typename Tp>
-constexpr bool operator<=(nullopt_t, const optional<Tp>& opt) noexcept {
+constexpr bool operator<=(nullopt_t, const optional<Tp>&) noexcept {
   return true;
 }
 
@@ -628,12 +629,12 @@ constexpr bool operator>(const optional<Tp>& opt, nullopt_t) noexcept {
 }
 
 template <typename Tp>
-constexpr bool operator>(nullopt_t, const optional<Tp>& opt) noexcept {
+constexpr bool operator>(nullopt_t, const optional<Tp>&) noexcept {
   return false;
 }
 
 template <typename Tp>
-constexpr bool operator>=(const optional<Tp>& opt, nullopt_t) noexcept {
+constexpr bool operator>=(const optional<Tp>&, nullopt_t) noexcept {
   return true;
 }
 
@@ -657,61 +658,61 @@ constexpr auto operator==(const Up& value, const optional<Tp>& opt)
 
 template <typename Tp, typename Up>
 constexpr auto operator!=(const optional<Tp>& opt, const Up& value)
-    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt == value) {
+    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt != value) {
   return !opt || *opt != value;
 }
 
 template <typename Tp, typename Up>
 constexpr auto operator!=(const Up& value, const optional<Tp>& opt)
-    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt == value) {
+    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt != value) {
   return !opt || value != *opt;
 }
 
 template <typename Tp, typename Up>
 constexpr auto operator<(const optional<Tp>& opt, const Up& value)
-    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt == value) {
+    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt <= value) {
   return !opt || *opt < value;
 }
 
 template <typename Tp, typename Up>
 constexpr auto operator<(const Up& value, const optional<Tp>& opt)
-    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt == value) {
+    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt < value) {
   return opt && value < *opt;
 }
 
 template <typename Tp, typename Up>
 constexpr auto operator<=(const optional<Tp>& opt, const Up& value)
-    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt == value) {
+    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt <= value) {
   return !opt || *opt <= value;
 }
 
 template <typename Tp, typename Up>
 constexpr auto operator<=(const Up& value, const optional<Tp>& opt)
-    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt == value) {
+    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt <= value) {
   return opt && value <= *opt;
 }
 
 template <typename Tp, typename Up>
 constexpr auto operator>(const optional<Tp>& opt, const Up& value)
-    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt == value) {
+    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt > value) {
   return opt && *opt > value;
 }
 
 template <typename Tp, typename Up>
 constexpr auto operator>(const Up& value, const optional<Tp>& opt)
-    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt == value) {
+    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt > value) {
   return !opt || value > *opt;
 }
 
 template <typename Tp, typename Up>
 constexpr auto operator>=(const optional<Tp>& opt, const Up& value)
-    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt == value) {
+    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt >= value) {
   return opt && *opt >= value;
 }
 
 template <typename Tp, typename Up>
 constexpr auto operator>=(const Up& value, const optional<Tp>& opt)
-    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt == value) {
+    -> POLLY_OPTIONAL_CONVERTIBLE_BOOL(*opt >= value) {
   return !opt || value >= *opt;
 }
 

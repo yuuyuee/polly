@@ -1,3 +1,6 @@
+#include "stubs/config.h"
+
+#ifndef POLLY_HAVE_STD_STRING_VIEW
 #include "stubs/string_view.h"
 #include <map>
 #include <stdexcept>
@@ -1004,3 +1007,5 @@ TEST(StringViewHashTest, Hash) {
   EXPECT_EQ(std::hash<polly::string_view>{}(s), std::hash<std::string>{}(s));
   EXPECT_EQ(std::hash<polly::string_view>{}(empty), 0);
 }
+
+#endif // POLLY_HAVE_STD_STRING_VIEW
