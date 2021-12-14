@@ -127,6 +127,12 @@ public:
       noexcept(std::is_nothrow_constructible<Tp, Args...>::value)
       : optional_internal::optional_base<Tp>(in_place, std::forward<Args>(args)...) {}
 
+  template <typename Up, typename... Args,
+      Requires<std::is_constructible<Tp, std::initializer_list<Up>&, Args...>> = true>
+  constexpr explicit optional(in_place_t, std::initializer_list<Up> il, Args&&... args)
+      noexcept(std::is_nothrow_constructible<Tp, std::initializer_list<Up>&, Args...>::value)
+      : optional_internal::optional_base<Tp>(in_place, il, std::forward<Args>(args)...) {}
+
   // Converting copy constructor conditionallly explicit.
   // The function does not participate in the overload resolution unless the
   // following conditions are met:
@@ -534,9 +540,18 @@ public:
   template <typename... Args,
       Requires<std::is_constructible<Tp, Args...>> = true>
   Tp& emplace(Args&&... args) noexcept(
-      std::is_nothrow_constructible<value_type, Args...>::value) {
+      std::is_nothrow_constructible<Tp, Args...>::value) {
     this->reset();
     this->construct(std::forward<Args>(args)...);
+    return this->get();
+  }
+
+  template <typename Up, typename... Args,
+      Requires<std::is_constructible<Tp, std::initializer_list<Up>&, Args...>> = true>
+  Tp& emplace(std::initializer_list<Up> il, Args&&... args) noexcept(
+      std::is_nothrow_constructible<Tp, std::initializer_list<Up>&, Args...>::value) {
+    this->reset();
+    this->construct(il, std::forward<Args>(args)...);
     return this->get();
   }
 };

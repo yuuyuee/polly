@@ -7,7 +7,6 @@
 
 namespace polly {
 
-
 #if defined(POLLY_HAVE_STD_OPTIONAL)
 using std::in_place_t;
 using std::in_place;

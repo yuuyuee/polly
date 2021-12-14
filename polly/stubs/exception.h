@@ -6,7 +6,7 @@
 
 #include "stubs/attributes.h"
 #if !defined(POLLY_HAVE_EXCEPTIONS)
-#include "stubs/check.h"
+#include "stubs/assert.h"
 #endif
 
 namespace polly {

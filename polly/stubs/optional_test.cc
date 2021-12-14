@@ -112,13 +112,13 @@ struct Listenable {
 
 StructorListener* Listenable::listener = nullptr;
 
-// ABSL_HAVE_NO_CONSTEXPR_INITIALIZER_LIST is defined to 1 when the standard
+// POLLY_HAVE_NO_CONSTEXPR_INITIALIZER_LIST is defined to 1 when the standard
 // library implementation doesn't marked initializer_list's default constructor
 // constexpr. The C++11 standard doesn't specify constexpr on it, but C++14
 // added it. However, libstdc++ 4.7 marked it constexpr.
 #if defined(_LIBCPP_VERSION) && \
     (_LIBCPP_STD_VER <= 11 || defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR))
-#define ABSL_HAVE_NO_CONSTEXPR_INITIALIZER_LIST 1
+#define POLLY_HAVE_NO_CONSTEXPR_INITIALIZER_LIST 1
 #endif
 
 struct ConstexprType {
@@ -130,11 +130,9 @@ struct ConstexprType {
   };
   constexpr ConstexprType() : x(kCtorDefault) {}
   constexpr explicit ConstexprType(int) : x(kCtorInt) {}
-#ifdef POLLY_HAVE_INITIALIZER_LIST_FUNCTIONS
-#ifndef ABSL_HAVE_NO_CONSTEXPR_INITIALIZER_LIST
-  constexpr ConstexprType(std::initializer_list<int> il)
+#ifndef POLLY_HAVE_NO_CONSTEXPR_INITIALIZER_LIST
+  constexpr ConstexprType(std::initializer_list<int>)
       : x(kCtorInitializerList) {}
-#endif
 #endif
   constexpr ConstexprType(const char*)  // NOLINT(runtime/explicit)
       : x(kCtorConstChar) {}
@@ -182,8 +180,7 @@ TEST(optionalTest, DefaultConstructor) {
   EXPECT_FALSE(empty);
   constexpr polly::optional<int> cempty;
   static_assert(!cempty.has_value(), "");
-  EXPECT_TRUE(
-      std::is_nothrow_default_constructible<polly::optional<int>>::value);
+  EXPECT_TRUE(std::is_nothrow_default_constructible<polly::optional<int>>::value);
 }
 
 TEST(optionalTest, nulloptConstructor) {
@@ -223,25 +220,22 @@ TEST(optionalTest, CopyConstructor) {
   // test copyablility
   EXPECT_TRUE(std::is_copy_constructible<polly::optional<int>>::value);
   EXPECT_TRUE(std::is_copy_constructible<polly::optional<Copyable>>::value);
-  EXPECT_FALSE(
-      std::is_copy_constructible<polly::optional<MoveableThrow>>::value);
-  EXPECT_FALSE(
-      std::is_copy_constructible<polly::optional<MoveableNoThrow>>::value);
+  EXPECT_FALSE(std::is_copy_constructible<polly::optional<MoveableThrow>>::value);
+  EXPECT_FALSE(std::is_copy_constructible<polly::optional<MoveableNoThrow>>::value);
   EXPECT_FALSE(std::is_copy_constructible<polly::optional<NonMovable>>::value);
 
-  EXPECT_FALSE(
-      polly::is_trivially_copy_constructible<polly::optional<Copyable>>::value);
-#if defined(ABSL_USES_STD_OPTIONAL) && defined(__GLIBCXX__)
+  EXPECT_FALSE(polly::is_trivially_copy_constructible<polly::optional<Copyable>>::value);
+
+#if defined(POLLY_HAVE_STD_OPTIONAL) && defined(__GLIBCXX__)
   // libstdc++ std::optional implementation (as of 7.2) has a bug: when T is
   // trivially copyable, optional<T> is not trivially copyable (due to one of
   // its base class is unconditionally nontrivial).
-#define ABSL_GLIBCXX_OPTIONAL_TRIVIALITY_BUG 1
+#define POLLY_GLIBCXX_OPTIONAL_TRIVIALITY_BUG 1
 #endif
-#ifndef ABSL_GLIBCXX_OPTIONAL_TRIVIALITY_BUG
-  EXPECT_TRUE(
-      polly::is_trivially_copy_constructible<polly::optional<int>>::value);
-  EXPECT_TRUE(
-      polly::is_trivially_copy_constructible<polly::optional<const int>>::value);
+
+#ifndef POLLY_GLIBCXX_OPTIONAL_TRIVIALITY_BUG
+  EXPECT_TRUE(polly::is_trivially_copy_constructible<polly::optional<int>>::value);
+  EXPECT_TRUE(polly::is_trivially_copy_constructible<polly::optional<const int>>::value);
 #ifndef _MSC_VER
   // See defect report "Trivial copy/move constructor for class with volatile
   // member" at
@@ -252,7 +246,7 @@ TEST(optionalTest, CopyConstructor) {
   EXPECT_TRUE(polly::is_trivially_copy_constructible<
               polly::optional<volatile int>>::value);
 #endif  // _MSC_VER
-#endif  // ABSL_GLIBCXX_OPTIONAL_TRIVIALITY_BUG
+#endif  // POLLY_GLIBCXX_OPTIONAL_TRIVIALITY_BUG
 
   // constexpr copy constructor for trivially copyable types
   {
@@ -276,7 +270,7 @@ TEST(optionalTest, CopyConstructor) {
     constexpr polly::optional<TrivialCopyable> o2 = o1;
     static_assert(o2, "");
     static_assert((*o2).x == 42, "");
-#ifndef ABSL_GLIBCXX_OPTIONAL_TRIVIALITY_BUG
+#ifndef POLLY_GLIBCXX_OPTIONAL_TRIVIALITY_BUG
     EXPECT_TRUE(polly::is_trivially_copy_constructible<
                 polly::optional<TrivialCopyable>>::value);
     EXPECT_TRUE(polly::is_trivially_copy_constructible<
@@ -286,10 +280,10 @@ TEST(optionalTest, CopyConstructor) {
     // std::optional when T is volatile-qualified. So skipping this test.
     // Bug report:
     // https://connect.microsoft.com/VisualStudio/feedback/details/3142534
-#if defined(ABSL_USES_STD_OPTIONAL) && defined(_MSC_VER) && _MSC_VER >= 1911
-#define ABSL_MSVC_OPTIONAL_VOLATILE_COPY_BUG 1
+#if defined(POLLY_USES_STD_OPTIONAL) && defined(_MSC_VER) && _MSC_VER >= 1911
+#define POLLY_MSVC_OPTIONAL_VOLATILE_COPY_BUG 1
 #endif
-#ifndef ABSL_MSVC_OPTIONAL_VOLATILE_COPY_BUG
+#ifndef POLLY_MSVC_OPTIONAL_VOLATILE_COPY_BUG
     EXPECT_FALSE(std::is_copy_constructible<
                  polly::optional<volatile TrivialCopyable>>::value);
 #endif
@@ -307,12 +301,11 @@ TEST(optionalTest, MoveConstructor) {
   EXPECT_TRUE(std::is_move_constructible<polly::optional<int>>::value);
   EXPECT_TRUE(std::is_move_constructible<polly::optional<Copyable>>::value);
   EXPECT_TRUE(std::is_move_constructible<polly::optional<MoveableThrow>>::value);
-  EXPECT_TRUE(
-      std::is_move_constructible<polly::optional<MoveableNoThrow>>::value);
+  EXPECT_TRUE(std::is_move_constructible<polly::optional<MoveableNoThrow>>::value);
   EXPECT_FALSE(std::is_move_constructible<polly::optional<NonMovable>>::value);
   // test noexcept
   EXPECT_TRUE(std::is_nothrow_move_constructible<polly::optional<int>>::value);
-#ifndef ABSL_USES_STD_OPTIONAL
+#ifndef POLLY_USES_STD_OPTIONAL
   // EXPECT_EQ(
   //     std::default_allocator_is_nothrow::value,
   //     std::is_nothrow_move_constructible<polly::optional<MoveableThrow>>::value);
@@ -343,14 +336,11 @@ TEST(optionalTest, InPlaceConstructor) {
   constexpr polly::optional<ConstexprType> opt1{polly::in_place_t(), 1};
   static_assert(opt1, "");
   static_assert((*opt1).x == ConstexprType::kCtorInt, "");
-#ifdef POLLY_HAVE_INITIALIZER_LIST_FUNCTIONS
-#ifndef ABSL_HAVE_NO_CONSTEXPR_INITIALIZER_LIST
+#ifndef POLLY_HAVE_NO_CONSTEXPR_INITIALIZER_LIST
   constexpr polly::optional<ConstexprType> opt2{polly::in_place_t(), {1, 2}};
   static_assert(opt2, "");
   static_assert((*opt2).x == ConstexprType::kCtorInitializerList, "");
 #endif
-#endif
-
   EXPECT_FALSE((std::is_constructible<polly::optional<ConvertsFromInPlaceT>,
                                       polly::in_place_t>::value));
   EXPECT_FALSE((std::is_constructible<polly::optional<ConvertsFromInPlaceT>,
@@ -399,9 +389,9 @@ TEST(optionalTest, ValueConstructor) {
   // `-std=c++17`.
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 7 && \
     __cplusplus == 201703L
-#define ABSL_GCC7_OVER_ICS_LIST_BUG 1
+#define POLLY_GCC7_OVER_ICS_LIST_BUG 1
 #endif
-#ifndef ABSL_GCC7_OVER_ICS_LIST_BUG
+#ifndef POLLY_GCC7_OVER_ICS_LIST_BUG
   constexpr polly::optional<int> opt3({});
   static_assert(opt3, "");
   static_assert(*opt3 == 0, "");
@@ -570,7 +560,6 @@ TEST(optionalTest, CopyMoveStructor) {
   EXPECT_EQ(1, listener.move);
 }
 
-#ifdef POLLY_HAVE_INITIALIZER_LIST_FUNCTIONS
 TEST(optionalTest, ListInit) {
   StructorListener listener;
   Listenable::listener = &listener;
@@ -578,7 +567,6 @@ TEST(optionalTest, ListInit) {
   polly::optional<Listenable> listinit2(polly::in_place, {1, 2});
   EXPECT_EQ(2, listener.listinit);
 }
-#endif
 
 TEST(optionalTest, AssignFromNullopt) {
   polly::optional<int> opt(1);
@@ -650,7 +638,7 @@ TEST(optionalTest, CopyAssignment) {
   EXPECT_FALSE(polly::is_trivially_copy_assignable<NonTrivial>::value);
 
   // std::optional doesn't support volatile nontrivial types.
-#ifndef ABSL_USES_STD_OPTIONAL
+#ifndef POLLY_USES_STD_OPTIONAL
   {
     StructorListener listener;
     Listenable::listener = &listener;
@@ -669,7 +657,7 @@ TEST(optionalTest, CopyAssignment) {
     EXPECT_EQ(1, listener.destruct);
     EXPECT_EQ(1, listener.volatile_copy_assign);
   }
-#endif  // ABSL_USES_STD_OPTIONAL
+#endif  // POLLY_USES_STD_OPTIONAL
 }
 
 TEST(optionalTest, MoveAssignment) {
@@ -693,7 +681,7 @@ TEST(optionalTest, MoveAssignment) {
     EXPECT_EQ(1, listener.move_assign);
   }
   // std::optional doesn't support volatile nontrivial types.
-#ifndef ABSL_USES_STD_OPTIONAL
+#ifndef POLLY_USES_STD_OPTIONAL
   {
     StructorListener listener;
     Listenable::listener = &listener;
@@ -713,17 +701,15 @@ TEST(optionalTest, MoveAssignment) {
     EXPECT_EQ(1, listener.destruct);
     EXPECT_EQ(1, listener.volatile_move_assign);
   }
-#endif  // ABSL_USES_STD_OPTIONAL
+#endif  // POLLY_USES_STD_OPTIONAL
   EXPECT_FALSE(std::is_move_assignable<polly::optional<const int>>::value);
   EXPECT_TRUE(std::is_move_assignable<polly::optional<Copyable>>::value);
   EXPECT_TRUE(std::is_move_assignable<polly::optional<MoveableThrow>>::value);
   EXPECT_TRUE(std::is_move_assignable<polly::optional<MoveableNoThrow>>::value);
   EXPECT_FALSE(std::is_move_assignable<polly::optional<NonMovable>>::value);
 
-  EXPECT_FALSE(
-      std::is_nothrow_move_assignable<polly::optional<MoveableThrow>>::value);
-  EXPECT_TRUE(
-      std::is_nothrow_move_assignable<polly::optional<MoveableNoThrow>>::value);
+  EXPECT_FALSE( std::is_nothrow_move_assignable<polly::optional<MoveableThrow>>::value);
+  EXPECT_TRUE(std::is_nothrow_move_assignable<polly::optional<MoveableNoThrow>>::value);
 }
 
 struct NoConvertToOptional {
@@ -805,12 +791,10 @@ TEST(optionalTest, ValueAssignment) {
   EXPECT_TRUE((std::is_assignable<polly::optional<MoveConvertFromOptional>&,
                                   NoConvertToOptional&&>::value));
   // U = const polly::optional<NoConvertToOptional>&
-  EXPECT_TRUE(
-      (std::is_assignable<polly::optional<CopyConvertFromOptional>&,
+  EXPECT_TRUE((std::is_assignable<polly::optional<CopyConvertFromOptional>&,
                           const polly::optional<NoConvertToOptional>&>::value));
   // U = polly::optional<NoConvertToOptional>
-  EXPECT_TRUE(
-      (std::is_assignable<polly::optional<MoveConvertFromOptional>&,
+  EXPECT_TRUE((std::is_assignable<polly::optional<MoveConvertFromOptional>&,
                           polly::optional<NoConvertToOptional>&&>::value));
 }
 
@@ -841,18 +825,15 @@ TEST(optionalTest, ConvertingAssignment) {
   EXPECT_EQ(std::string("def"), *opt_str);
 
   // operator=(const polly::optional<U>&) with U = NoConvertToOptional
-  EXPECT_TRUE(
-      (std::is_assignable<polly::optional<CopyConvert>,
+  EXPECT_TRUE((std::is_assignable<polly::optional<CopyConvert>,
                           const polly::optional<NoConvertToOptional>&>::value));
   // operator=(const polly::optional<U>&) with U = NoConvertToOptional
   // triggers SFINAE because
   // std::is_constructible_v<MoveConvert, const NoConvertToOptional&> is false
-  EXPECT_FALSE(
-      (std::is_assignable<polly::optional<MoveConvert>&,
+  EXPECT_FALSE((std::is_assignable<polly::optional<MoveConvert>&,
                           const polly::optional<NoConvertToOptional>&>::value));
   // operator=(polly::optional<U>&&) with U = NoConvertToOptional
-  EXPECT_TRUE(
-      (std::is_assignable<polly::optional<MoveConvert>&,
+  EXPECT_TRUE((std::is_assignable<polly::optional<MoveConvert>&,
                           polly::optional<NoConvertToOptional>&&>::value));
   // operator=(const polly::optional<U>&) with U = NoConvertToOptional triggers
   // SFINAE because std::is_constructible_v<MoveConvertFromOptional, const
@@ -860,8 +841,7 @@ TEST(optionalTest, ConvertingAssignment) {
   // polly::optional<NoConverToOptional>& triggers SFINAE because
   // std::is_constructible<MoveConvertFromOptional,
   // polly::optional<NoConvertToOptional>&&> is true.
-  EXPECT_FALSE(
-      (std::is_assignable<polly::optional<MoveConvertFromOptional>&,
+  EXPECT_FALSE((std::is_assignable<polly::optional<MoveConvertFromOptional>&,
                           const polly::optional<NoConvertToOptional>&>::value));
 }
 
@@ -906,7 +886,6 @@ TEST(optionalTest, Emplace) {
   EXPECT_EQ(&ref, &o.value());
 }
 
-#ifdef POLLY_HAVE_INITIALIZER_LIST_FUNCTIONS
 TEST(optionalTest, ListEmplace) {
   StructorListener listener;
   Listenable::listener = &listener;
@@ -923,7 +902,6 @@ TEST(optionalTest, ListEmplace) {
   Listenable& ref = o.emplace({1});
   EXPECT_EQ(&ref, &o.value());
 }
-#endif
 
 TEST(optionalTest, Swap) {
   polly::optional<int> opt_empty, opt1 = 1, opt2 = 2;
@@ -1003,7 +981,7 @@ TEST(optionalTest, PointerStuff) {
                      + __GNUC_MINOR__ * 100 \
                      + __GNUC_PATCHLEVEL__)
 #if GCC_VERSION < 40901
-#define ABSL_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG
+#define POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG
 #endif
 #endif
 
@@ -1023,7 +1001,7 @@ TEST(optionalTest, PointerStuff) {
 // This should invoke the "const &&" overload but since it ignores the const
 // qualifier it finds the "&&" overload the best candidate.
 #if defined(_MSC_VER) && _MSC_VER < 1910
-#define ABSL_SKIP_OVERLOAD_TEST_DUE_TO_MSVC_BUG
+#define POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG
 #endif
 
 TEST(optionalTest, Value) {
@@ -1038,15 +1016,15 @@ TEST(optionalTest, Value) {
   EXPECT_EQ("lvalue_c", lvalue_c.value());
   EXPECT_EQ("xvalue", O(polly::in_place, "xvalue").value());
   EXPECT_EQ("xvalue_c", OC(polly::in_place, "xvalue_c").value());
-#ifndef ABSL_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG
+#ifndef POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG
   EXPECT_EQ("cxvalue", CO(polly::in_place, "cxvalue").value());
 #endif
   EXPECT_EQ("&", TypeQuals(lvalue.value()));
   EXPECT_EQ("c&", TypeQuals(clvalue.value()));
   EXPECT_EQ("c&", TypeQuals(lvalue_c.value()));
   EXPECT_EQ("&&", TypeQuals(O(polly::in_place, "xvalue").value()));
-#if !defined(ABSL_SKIP_OVERLOAD_TEST_DUE_TO_MSVC_BUG) && \
-    !defined(ABSL_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
+#if !defined(POLLY_SKIP_OVERLOAD_TEST_DUE_TO_MSVC_BUG) && \
+    !defined(POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
   EXPECT_EQ("c&&", TypeQuals(CO(polly::in_place, "cxvalue").value()));
 #endif
   EXPECT_EQ("c&&", TypeQuals(OC(polly::in_place, "xvalue_c").value()));
@@ -1061,7 +1039,7 @@ TEST(optionalTest, Value) {
 
   // test exception throw on value()
   polly::optional<int> empty;
-#ifdef ABSL_HAVE_EXCEPTIONS
+#ifdef POLLY_HAVE_EXCEPTIONS
   EXPECT_THROW((void)empty.value(), polly::bad_optional_access);
 #else
   EXPECT_DEATH_IF_SUPPORTED((void)empty.value(), "Bad optional access");
@@ -1070,7 +1048,7 @@ TEST(optionalTest, Value) {
   // test constexpr value()
   constexpr polly::optional<int> o1(1);
   static_assert(1 == o1.value(), "");  // const &
-#if !defined(_MSC_VER) && !defined(ABSL_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
+#if !defined(_MSC_VER) && !defined(POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
   using COI = const polly::optional<int>;
   static_assert(2 == COI(2).value(), "");  // const &&
 #endif
@@ -1088,14 +1066,14 @@ TEST(optionalTest, DerefOperator) {
   EXPECT_EQ("lvalue_c", *lvalue_c);
   EXPECT_EQ("xvalue", *O(polly::in_place, "xvalue"));
   EXPECT_EQ("xvalue_c", *OC(polly::in_place, "xvalue_c"));
-#ifndef ABSL_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG
+#ifndef POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG
   EXPECT_EQ("cxvalue", *CO(polly::in_place, "cxvalue"));
 #endif
   EXPECT_EQ("&", TypeQuals(*lvalue));
   EXPECT_EQ("c&", TypeQuals(*clvalue));
   EXPECT_EQ("&&", TypeQuals(*O(polly::in_place, "xvalue")));
-#if !defined(ABSL_SKIP_OVERLOAD_TEST_DUE_TO_MSVC_BUG) && \
-    !defined(ABSL_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
+#if !defined(POLLY_SKIP_OVERLOAD_TEST_DUE_TO_MSVC_BUG) && \
+    !defined(POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
   EXPECT_EQ("c&&", TypeQuals(*CO(polly::in_place, "cxvalue")));
 #endif
   EXPECT_EQ("c&&", TypeQuals(*OC(polly::in_place, "xvalue_c")));
@@ -1110,7 +1088,7 @@ TEST(optionalTest, DerefOperator) {
 
   constexpr polly::optional<int> opt1(1);
   static_assert(*opt1 == 1, "");
-#if !defined(_MSC_VER) && !defined(ABSL_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
+#if !defined(_MSC_VER) && !defined(POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
   using COI = const polly::optional<int>;
   static_assert(*COI(2) == 2, "");
 #endif
@@ -1126,9 +1104,9 @@ TEST(optionalTest, ValueOr) {
   constexpr polly::optional<double> copt_empty, copt_set = 1.2;
   static_assert(42.0 == copt_empty.value_or(42), "");
   static_assert(1.2 == copt_set.value_or(42), "");
-#ifndef ABSL_SKIP_OVERLOAD_TEST_DUE_TO_MSVC_BUG
+#ifndef POLLY_SKIP_OVERLOAD_TEST_DUE_TO_MSVC_BUG
   using COD = const polly::optional<double>;
-  static_assert(42.0 == COD().value_or(42), "");
+  static_assert(42 == COD().value_or(42), "");
   static_assert(1.2 == COD(1.2).value_or(42), "");
 #endif
 }
@@ -1212,8 +1190,8 @@ void optionalTest_Comparisons_EXPECT_GREATER(T x, U y) {
 
 template <typename T, typename U, typename V>
 void TestComparisons() {
-  polly::optional<T> ae, a2{2}, a4{4};
-  polly::optional<U> be, b2{2}, b4{4};
+  polly::optional<T> ae, a2(2), a4(4);
+  polly::optional<U> be, b2(2), b4(4);
   V v3 = 3;
 
   // LHS: polly::nullopt, ae, a2, v3, a4
@@ -1263,22 +1241,43 @@ struct Int2 {
 };
 
 // comparison between Int1 and Int2
+//constexpr bool operator==(const Int1& lhs, const Int2& rhs) {
+//  return lhs.i == rhs.i;
+//}
 constexpr bool operator==(const Int1& lhs, const Int2& rhs) {
+  return lhs.i == rhs.i;
+}
+constexpr bool operator==(const Int2& lhs, const Int1& rhs) {
   return lhs.i == rhs.i;
 }
 constexpr bool operator!=(const Int1& lhs, const Int2& rhs) {
   return !(lhs == rhs);
 }
+constexpr bool operator!=(const Int2& lhs, const Int1& rhs) {
+  return !(lhs == rhs);
+}
 constexpr bool operator<(const Int1& lhs, const Int2& rhs) {
+  return lhs.i < rhs.i;
+}
+constexpr bool operator<(const Int2& lhs, const Int1& rhs) {
   return lhs.i < rhs.i;
 }
 constexpr bool operator<=(const Int1& lhs, const Int2& rhs) {
   return lhs < rhs || lhs == rhs;
 }
+constexpr bool operator<=(const Int2& lhs, const Int1& rhs) {
+  return lhs < rhs || lhs == rhs;
+}
 constexpr bool operator>(const Int1& lhs, const Int2& rhs) {
   return !(lhs <= rhs);
 }
+constexpr bool operator>(const Int2& lhs, const Int1& rhs) {
+  return !(lhs <= rhs);
+}
 constexpr bool operator>=(const Int1& lhs, const Int2& rhs) {
+  return !(lhs < rhs);
+}
+constexpr bool operator>=(const Int2& lhs, const Int1& rhs) {
   return !(lhs < rhs);
 }
 
@@ -1495,8 +1494,7 @@ TEST(optionalTest, ValueType) {
   EXPECT_TRUE((std::is_same<polly::optional<int>::value_type, int>::value));
   EXPECT_TRUE((std::is_same<polly::optional<std::string>::value_type,
                             std::string>::value));
-  EXPECT_FALSE(
-      (std::is_same<polly::optional<int>::value_type, polly::nullopt_t>::value));
+  EXPECT_FALSE((std::is_same<polly::optional<int>::value_type, polly::nullopt_t>::value));
 }
 
 template <typename T>
@@ -1521,20 +1519,13 @@ TEST(optionalTest, Hash) {
 
   static_assert(is_hash_enabled_for<polly::optional<int>>::value, "");
   static_assert(is_hash_enabled_for<polly::optional<Hashable>>::value, "");
-  static_assert(
-      is_hash_enabled_for<polly::optional<int>>::value, "");
-  static_assert(
-      is_hash_enabled_for<polly::optional<Hashable>>::value,
-      "");
+  static_assert(is_hash_enabled_for<polly::optional<int>>::value, "");
+  static_assert(is_hash_enabled_for<polly::optional<Hashable>>::value, "");
   //polly::type_traits_internal::AssertHashEnabled<polly::optional<int>>();
   //polly::type_traits_internal::AssertHashEnabled<polly::optional<Hashable>>();
 
-#if ABSL_META_INTERNAL_STD_HASH_SFINAE_FRIENDLY_
   static_assert(!is_hash_enabled_for<polly::optional<NonHashable>>::value, "");
-  static_assert(!polly::type_traits_internal::IsHashable<
-                    polly::optional<NonHashable>>::value,
-                "");
-#endif
+  static_assert(!is_hash_enabled_for<polly::optional<NonHashable>>::value, "");
 
   // libstdc++ std::optional is missing remove_const_t, i.e. it's using
   // std::hash<T> rather than std::hash<std::remove_const_t<T>>.
@@ -1551,9 +1542,7 @@ TEST(optionalTest, Hash) {
 
 struct MoveMeNoThrow {
   MoveMeNoThrow() : x(0) {}
-  [[noreturn]] MoveMeNoThrow(const MoveMeNoThrow& other) : x(other.x) {
-    abort();
-  }
+  MoveMeNoThrow(const MoveMeNoThrow& other) noexcept : x(other.x) {}
   MoveMeNoThrow(MoveMeNoThrow&& other) noexcept : x(other.x) {}
   int x;
 };
@@ -1565,19 +1554,17 @@ struct MoveMeThrow {
   int x;
 };
 
-#if 0
 TEST(optionalTest, NoExcept) {
+  static_assert(std::is_nothrow_move_constructible<polly::optional<int>>::value, "");
+  static_assert(std::is_nothrow_move_assignable<polly::optional<int>>::value, "");
   static_assert(std::is_nothrow_move_constructible<polly::optional<MoveMeNoThrow>>::value, "");
-#ifndef ABSL_USES_STD_OPTIONAL
-  static_assert(polly::default_allocator_is_nothrow::value ==
-                    std::is_nothrow_move_constructible<
-                        polly::optional<MoveMeThrow>>::value,
-                "");
-#endif
+  static_assert(std::is_nothrow_move_assignable<polly::optional<MoveMeNoThrow>>::value, "");
+  //static_assert(polly::default_allocator_is_nothrow::value ==
+  //    std::is_nothrow_move_constructible<polly::optional<MoveMeThrow>>::value,
+  //    "");
   std::vector<polly::optional<MoveMeNoThrow>> v;
   for (int i = 0; i < 10; ++i) v.emplace_back();
 }
-#endif
 
 struct AnyLike {
   AnyLike(AnyLike&&) = default;
@@ -1588,8 +1575,9 @@ struct AnyLike {
             typename std::enable_if<
                 !polly::Or<
                     std::is_same<AnyLike, T>,
-                    polly::Not<std::is_copy_constructible<T>>>::value,
-                int>::type = 0>
+                    polly::Not<std::is_copy_constructible<T>>
+                >::value,
+            int>::type = 0>
   AnyLike(ValueType&&) {}  // NOLINT(runtime/explicit)
 
   AnyLike& operator=(AnyLike&&) = default;
@@ -1608,23 +1596,13 @@ struct AnyLike {
 
 TEST(optionalTest, ConstructionConstraints) {
   EXPECT_TRUE((std::is_constructible<AnyLike, polly::optional<AnyLike>>::value));
-
-  EXPECT_TRUE(
-      (std::is_constructible<AnyLike, const polly::optional<AnyLike>&>::value));
-
+  EXPECT_TRUE((std::is_constructible<AnyLike, const polly::optional<AnyLike>&>::value));
   EXPECT_TRUE((std::is_constructible<polly::optional<AnyLike>, AnyLike>::value));
-  EXPECT_TRUE(
-      (std::is_constructible<polly::optional<AnyLike>, const AnyLike&>::value));
-
+  EXPECT_TRUE((std::is_constructible<polly::optional<AnyLike>, const AnyLike&>::value));
   EXPECT_TRUE((std::is_convertible<polly::optional<AnyLike>, AnyLike>::value));
-
-  EXPECT_TRUE(
-      (std::is_convertible<const polly::optional<AnyLike>&, AnyLike>::value));
-
+  EXPECT_TRUE((std::is_convertible<const polly::optional<AnyLike>&, AnyLike>::value));
   EXPECT_TRUE((std::is_convertible<AnyLike, polly::optional<AnyLike>>::value));
-  EXPECT_TRUE(
-      (std::is_convertible<const AnyLike&, polly::optional<AnyLike>>::value));
-
+  EXPECT_TRUE( (std::is_convertible<const AnyLike&, polly::optional<AnyLike>>::value));
   EXPECT_TRUE(std::is_move_constructible<polly::optional<AnyLike>>::value);
   EXPECT_TRUE(std::is_copy_constructible<polly::optional<AnyLike>>::value);
 }
@@ -1638,7 +1616,6 @@ TEST(optionalTest, AssignmentConstraints) {
   EXPECT_TRUE(std::is_copy_assignable<polly::optional<AnyLike>>::value);
 }
 
-#if !defined(__EMSCRIPTEN__)
 struct NestedClassBug {
   struct Inner {
     bool dummy = false;
@@ -1661,7 +1638,6 @@ TEST(optionalTest, InPlaceTSFINAEBug) {
   o.emplace();
   EXPECT_TRUE(o.has_value());
 }
-#endif  // !defined(__EMSCRIPTEN__)
 
 }  // namespace
 
