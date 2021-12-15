@@ -24,7 +24,7 @@ using std::nullopt;
 #include "stubs/utility.h"
 #include "stubs/exception.h"
 #include "stubs/enable_special_members.h"
-#include "stubs/internal/optional_base.h"
+#include "stubs/internal/optional.h"
 
 namespace polly {
 // A type of object to thrown by std::optional::value when accessing an optional
