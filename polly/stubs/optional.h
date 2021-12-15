@@ -74,7 +74,7 @@ POLLY_INLINE_CONSTEXPR(nullopt_t, nullopt, nullopt_t::construct_tag{});
 // with the tag types nullopt_t or in_palce_t is iill-formed.
 template <typename Tp>
 class optional
-    : private optional_internal::optional_base<Tp>/*,
+    : private optional_internal::optional_base<Tp>,
       private enable_copy_move<
         std::is_copy_constructible<Tp>::value,    // Copy
         std::is_copy_constructible<Tp>::value &&  // Copy assignment
@@ -83,22 +83,19 @@ class optional
         std::is_move_constructible<Tp>::value &&  // Move assignment
         std::is_move_assignable<Tp>::value,
         optional<Tp>                              // Unique tag type
-      > */{
-  static_assert(
-      !std::is_same<nullopt_t, typename std::remove_cv<Tp>::type>::value,
-      "optional<nullopt_t> is not allowed.");
-  static_assert(
-      !std::is_same<in_place_t, typename std::remove_cv<Tp>::type>::value,
-      "optional<in_place_t> is not allowed.");
-  static_assert(
-      !std::is_reference<Tp>::value, "optional<reference> is not allowed.");
-
+      > {
 private:
-  template <typename Up>
-  using NotSelf = Not<std::is_same<optional, remove_cvref_t<Up>>>;
+  static_assert(!std::is_same<nullopt_t, typename std::remove_cv<Tp>::type>::value,
+      "optional<nullopt_t> is not allowed.");
+  static_assert(!std::is_same<in_place_t, typename std::remove_cv<Tp>::type>::value,
+      "optional<in_place_t> is not allowed.");
+  static_assert(!std::is_reference<Tp>::value, "optional<reference> is not allowed.");
 
   template <typename Up>
-  using NotInplace = Not<std::is_same<in_place_t, remove_cvref_t<Up>>>;
+  using not_self = Not<std::is_same<optional, remove_cvref_t<Up>>>;
+
+  template <typename Up>
+  using not_in_place = Not<std::is_same<in_place_t, remove_cvref_t<Up>>>;
 
 public:
   using value_type = Tp;
@@ -245,16 +242,16 @@ public:
 
 #define POLLY_OPT_REQ_IMPLICIT_VALUE_CTOR(Tp, Up)             \
   Requires<                                                   \
-      NotSelf<Up>,                                            \
-      NotInplace<Up>,                                         \
+      not_self<Up>,                                            \
+      not_in_place<Up>,                                         \
       std::is_constructible<Tp, Up&&>,                        \
       std::is_convertible<Up&&, Tp>                          \
   > = true
 
 #define POLLY_OPT_REQ_EXPLICIT_VALUE_CTOR(Tp, Up)             \
   Requires<                                                   \
-      NotSelf<Up>,                                            \
-      NotInplace<Up>,                                         \
+      not_self<Up>,                                            \
+      not_in_place<Up>,                                         \
       std::is_constructible<Tp, Up&&>,                        \
       Not<std::is_convertible<Up&&, Tp>>                     \
   > = true
@@ -292,18 +289,18 @@ public:
   //    1. std::remove_cvref<Up>::type is not std::optional<Tp>
   //    2. std::is_constructible<Tp, Up>::value is true
   //    3. std::is_assignable<T&, U>::value is true
-  //    4. at least on of the following is true
+  //    4. at least one of the following is true
   //        a. Tp is not a scalar type
   //        b. std::decay<Up>::type is not Tp
 #define POLLY_OPT_REQ_VALUE_ASSIGNMENT(Tp, Up)                \
   Requires<                                                   \
-      NotSelf<Up>,                                            \
+      not_self<Up>,                                           \
       std::is_constructible<Tp, Up>,                          \
       std::is_assignable<Tp&, Up>,                            \
-      Or<                                                     \
-        Not<std::is_scalar<Tp>>,                              \
-        Not<std::is_same<Tp, typename std::decay<Up>::type>>  \
-      >                                                       \
+      Not<And<                                                \
+          std::is_scalar<Tp>,                                 \
+          std::is_same<Tp, typename std::decay<Up>::type>     \
+      >>                                                      \
   > = true
 
   template <typename Up = Tp, POLLY_OPT_REQ_VALUE_ASSIGNMENT(Tp, Up)>
@@ -354,7 +351,7 @@ public:
       Not<std::is_same<Tp, Up>>,                              \
       Not<optional_internal::converts_from_optional<Tp, Up>>, \
       Not<optional_internal::assigns_from_optional<Tp, Up>>,  \
-      Not<std::is_constructible<Tp, const Up&>>,              \
+      std::is_constructible<Tp, const Up&>,                   \
       std::is_assignable<Tp&, const Up&>                      \
   > = true
 
@@ -363,7 +360,7 @@ public:
       Not<std::is_same<Tp, Up>>,                              \
       Not<optional_internal::converts_from_optional<Tp, Up>>, \
       Not<optional_internal::assigns_from_optional<Tp, Up>>,  \
-      Not<std::is_constructible<Tp, Up>>,                     \
+      std::is_constructible<Tp, Up>,                          \
       std::is_assignable<Tp&, Up>                             \
   > = true
 
@@ -373,7 +370,7 @@ public:
       noexcept(std::is_nothrow_constructible<Tp, const Up&>::value &&
               std::is_nothrow_assignable<Tp&,  const Up&>::value) {
     if (other) {
-      if (this->engaged()) {
+      if (this->is_engaged()) {
         this->get() = *other;
       } else {
         this->construct(*other);
@@ -381,6 +378,7 @@ public:
     } else {
       this->reset();
     }
+    return *this;
   }
 
   // Value move assignment operators
@@ -389,7 +387,7 @@ public:
       noexcept(std::is_nothrow_constructible<Tp, Up>::value &&
               std::is_nothrow_assignable<Tp&,  Up>::value) {
     if (other) {
-      if (this->engaged()) {
+      if (this->is_engaged()) {
         this->get() = std::move(*other);
       } else {
         this->construct(std::move(*other));
@@ -397,6 +395,7 @@ public:
     } else {
       this->reset();
     }
+    return *this;
   }
 
   // Observers
