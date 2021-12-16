@@ -1,22 +1,24 @@
-string_view_test_SRC = polly/stubs/string_view_test.o	\
-		polly/stubs/internal/raw_logging.o								\
-		polly/stubs/hash.o																\
-		third_party/gtest/gtest_main.o										\
+string_view_test_SRC = polly/stubs/string_view_test.o \
+		polly/stubs/internal/raw_logging.o            \
+		polly/stubs/hash.o                            \
+		third_party/gtest/gtest_main.o                \
 		third_party/gtest/gmock-gtest-all.o
 
-hash_test_SRC = polly/stubs/hash_test.o	\
-		polly/stubs/hash.o									\
-		third_party/gtest/gtest_main.o			\
+hash_test_SRC = polly/stubs/hash_test.o \
+		polly/stubs/hash.o              \
+		third_party/gtest/gtest_main.o  \
 		third_party/gtest/gmock-gtest-all.o
 
-optional_test_SRC = polly/stubs/optional_test.o	\
-		polly/stubs/internal/raw_logging.o					\
-		third_party/gtest/gtest_main.o							\
+optional_test_SRC = polly/stubs/optional_test.o \
+		polly/stubs/internal/raw_logging.o      \
+		third_party/gtest/gtest_main.o          \
 		third_party/gtest/gmock-gtest-all.o
 
 type_traits_test_SRC = polly/stubs/type_traits_test.o \
-		third_party/gtest/gtest_main.o 	\
+		third_party/gtest/gtest_main.o                \
 		third_party/gtest/gmock-gtest-all.o
+
+all: hash_test type_traits_test string_view_test optional_test
 
 string_view_test: $(string_view_test_SRC)
 	g++ -std=c++1y -g -Wall -Wextra -o $@ $^ -lpthread
