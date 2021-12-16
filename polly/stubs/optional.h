@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/config.h"
+#include "stubs/internal/config.h"
 
 #if defined(POLLY_HAVE_STD_OPTIONAL)
 #include <optional>
@@ -18,9 +18,9 @@ using std::in_place;
 
 #else // POLLY_HAVE_STD_OPTIONAL
 
-#include "stubs/attributes.h"
 #include "stubs/macros.h"
 #include "stubs/exception.h"
+#include "stubs/internal/raw_logging.h"
 #include "stubs/internal/optional.h"
 
 namespace polly {
@@ -37,8 +37,8 @@ class bad_optional_access : public std::exception {
 };
 
 // throw delegator
-POLLY_ATTR_NORETURN inline
-void ThrowBadOptionalAccess() {
+POLLY_ATTR_NORETURN POLLY_ATTR_ALWAYS_INLINE
+inline void ThrowBadOptionalAccess() {
   POLLY_THROW_OR_ABORT(bad_optional_access{});
 }
 

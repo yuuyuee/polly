@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/config.h"
+#include "stubs/internal/config.h"
 
 #if defined(POLLY_HAVE_STD_STRING_VIEW)
 #include <string_view>
@@ -11,17 +11,15 @@ using std::string_view;
 
 #else // POLLY_HAVE_STD_STRING_VIEW
 
+#include <cstring>
 #include <string>
 #include <iterator>
 #include <limits>
-#include <algorithm>
 #include <ostream>
 
-#include "stubs/attributes.h"
-#include "stubs/assert.h"
-#include "stubs/const.h"
 #include "stubs/exception.h"
 #include "stubs/hash.h"
+#include "stubs/internal/raw_logging.h"
 
 namespace polly {
 // The class template basic_string_view describes an object that can refer to
@@ -175,7 +173,7 @@ public:
   constexpr basic_string_view substr(size_type pos = 0, size_type n = npos) const {
     return POLLY_EXPECT_FALSE(pos > len_)
         ? (polly::ThrowStdOutOfRange("polly::string_view::substr"), basic_string_view())
-        : basic_string_view(ptr_ + pos, polly::ConstMin(n, len_ - pos));
+        : basic_string_view(ptr_ + pos, n < len_ - pos ? n : len_ - pos);
   }
 
   // Compares tow character sequences, negative value if this view is less
@@ -589,7 +587,7 @@ namespace string_view_internal {
 template<typename Char, typename Traits>
 void WritePadding(std::basic_ostream<Char, Traits>& o, size_t pad) {
   char fill_buf[32];
-  std::fill_n(fill_buf, 32, o.fill());
+  memset(fill_buf, o.fill(), 32);
   while (pad) {
     size_t n = std::min(pad, sizeof(fill_buf));
     o.write(fill_buf, n);

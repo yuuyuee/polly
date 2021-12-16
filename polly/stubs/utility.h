@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include "stubs/config.h"
+#include "stubs/internal/config.h"
 #include "stubs/macros.h"
 
 namespace polly {
@@ -38,5 +38,18 @@ template<size_t I> struct in_place_index_t {
 template<size_t I>
 void in_place_index(in_place_index_t<I>) {}
 #endif  // ABSL_USES_STD_VARIANT
+
+// Like as std::min but constant function.
+template<typename Tp>
+constexpr const Tp& min(const Tp& a, const Tp& b) {
+  return b < a ? b : a;
+}
+
+// Like as std::max but constant function.
+template<typename Tp>
+constexpr const Tp& max(const Tp& a, const Tp& b) {
+  return a < b ? b: a;
+}
+
 
 } // namespace polly

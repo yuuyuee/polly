@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "stubs/config.h"
+#include "stubs/internal/config.h"
 
 namespace polly {
 template <typename...>

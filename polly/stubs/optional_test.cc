@@ -16,7 +16,7 @@
 //  1. adapted to polly
 //  2. commeneted for the initialize-list initialized functions.
 
-#include "stubs/config.h"
+#include "stubs/internal/config.h"
 #include <iostream>
 // This test is a no-op when polly::optional is an alias for std::optional.
 

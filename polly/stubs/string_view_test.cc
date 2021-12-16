@@ -1,4 +1,4 @@
-#include "stubs/config.h"
+#include "stubs/internal/config.h"
 
 #ifndef POLLY_HAVE_STD_STRING_VIEW
 #include "stubs/string_view.h"

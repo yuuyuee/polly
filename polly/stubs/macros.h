@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/config.h"
+#include "stubs/internal/config.h"
 #include "stubs/identity.h"
 
 namespace polly {

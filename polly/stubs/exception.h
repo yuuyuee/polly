@@ -4,7 +4,7 @@
 #include <string>
 #include <stdexcept>
 
-#include "stubs/attributes.h"
+#include "stubs/internal/config.h"
 #if !defined(POLLY_HAVE_EXCEPTIONS)
 #include "stubs/assert.h"
 #endif
@@ -13,10 +13,7 @@ namespace polly {
 #if defined(POLLY_HAVE_EXCEPTIONS)
 # define POLLY_THROW_OR_ABORT(ex) throw ex
 #else // POLLY_HAVE_EXCEPTIONS
-# define POLLY_THROW_OR_ABORT(ex) do {
-    POLLY_MESSAGE(ex.what());
-    std::abort();
-  } while (0)
+# define POLLY_THROW_OR_ABORT(ex) POLLY_INTERNAL_LOG_FATAL(ex.what())
 #endif // POLLY_HAVE_EXCEPTIONS
 
 #define POLLY_MAKE_EXCEPTIONS_FN(XX)                  \
@@ -31,13 +28,13 @@ namespace polly {
   XX(ThrowStdUnderflowError,  std::underflow_error)
 
 #define POLLY_EXCEPTIONS_MAP(fn, type)                \
-  POLLY_ATTR_NORETURN inline                          \
-  void fn(const char* what) {                         \
+  POLLY_ATTR_NORETURN POLLY_ATTR_ALWAYS_INLINE        \
+  inline void fn(const char* what) {                  \
     POLLY_THROW_OR_ABORT(type{what});                 \
   }                                                   \
                                                       \
-  POLLY_ATTR_NORETURN inline                          \
-  void fn(const std::string& what) {                  \
+  POLLY_ATTR_NORETURN POLLY_ATTR_ALWAYS_INLINE        \
+  inline void fn(const std::string& what) {           \
     POLLY_THROW_OR_ABORT(type{what});                 \
   }
 

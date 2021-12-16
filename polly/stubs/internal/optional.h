@@ -5,7 +5,6 @@
 
 #include "stubs/type_traits.h"
 #include "stubs/utility.h"
-#include "stubs/assert.h"
 
 namespace polly {
 template <typename Tp>
