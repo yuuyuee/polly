@@ -4,6 +4,7 @@
 
 #if defined(POLLY_HAVE_STD_OPTIONAL)
 #include <optional>
+#include <utility>
 
 namespace polly {
 using std::bad_optional_access;
@@ -11,19 +12,15 @@ using std::optional;
 using std::make_optional;
 using std::nullopt_t;
 using std::nullopt;
+using std::in_place_t;
+using std::in_place;
 } // namespace polly
 
 #else // POLLY_HAVE_STD_OPTIONAL
 
-#include <initializer_list>
-#include <type_traits>
-#include <functional>
-
 #include "stubs/attributes.h"
 #include "stubs/macros.h"
-#include "stubs/utility.h"
 #include "stubs/exception.h"
-#include "stubs/enable_special_members.h"
 #include "stubs/internal/optional.h"
 
 namespace polly {
@@ -75,15 +72,7 @@ POLLY_INLINE_CONSTEXPR(nullopt_t, nullopt, nullopt_t::construct_tag{});
 template <typename Tp>
 class optional
     : private optional_internal::optional_base<Tp>,
-      private enable_copy_move<
-        std::is_copy_constructible<Tp>::value,    // Copy
-        std::is_copy_constructible<Tp>::value &&  // Copy assignment
-        std::is_copy_assignable<Tp>::value,
-        std::is_move_constructible<Tp>::value,    // Move
-        std::is_move_constructible<Tp>::value &&  // Move assignment
-        std::is_move_assignable<Tp>::value,
-        optional<Tp>                              // Unique tag type
-      > {
+      private optional_internal::enable_copy_move<Tp, optional<Tp>> {
 private:
   static_assert(!std::is_same<nullopt_t, typename std::remove_cv<Tp>::type>::value,
       "optional<nullopt_t> is not allowed.");
