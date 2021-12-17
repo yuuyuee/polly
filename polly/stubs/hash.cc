@@ -28,7 +28,7 @@ size_t MurMurHash64(const void* ptr, size_t len, size_t seed) {
   if (len == 0)
     return 0;
 
-  static constexpr const size_t kMul = (0xC6A4A793UL << 32) +  0x5bd1e995UL;
+  constexpr const size_t kMul = (0xC6A4A793UL << 32) +  0x5bd1e995UL;
   const char* cptr = static_cast<const char*>(ptr);
 
   // Remove the bytes not divisible by the sizeof(size_t).

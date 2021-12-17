@@ -1,8 +1,8 @@
 #pragma once
 
-#include <utility>
-
 #include "stubs/internal/config.h"
+
+#include <utility>
 #include "stubs/macros.h"
 
 namespace polly {

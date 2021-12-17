@@ -10,42 +10,26 @@
 #define POLLY_RAW_LOGGING_ERROR ::polly::raw_logging_internal::LogSeverity::kError
 #define POLLY_RAW_LOGGING_FATAL ::polly::raw_logging_internal::LogSeverity::kFatal
 
-#define POLLY_LOG(severity, message) do {                           \
+#define POLLY_RAW_LOG(severity, fmt, ...) do {                      \
   ::polly::raw_logging_internal::RawLog(                            \
-      "[%s@%d %-7s] %s\n",                                          \
-      ::polly::raw_logging_internal::Basename(__FILE__),            \
+      "[%s:%d @ %-5s] " fmt "\n",                                   \
+      ::polly::raw_logging_internal::Basename(                      \
+          __FILE__, sizeof(__FILE__) - 1),                          \
       __LINE__,                                                     \
-      POLLY_RAW_LOGGING_ ## severity,                               \
-      message                                                       \
-  );                                                                \
+      ::polly::raw_logging_internal::StrLogSeverity(                \
+          POLLY_RAW_LOGGING_ ## severity),                          \
+      ## __VA_ARGS__);                                              \
                                                                     \
   if (POLLY_RAW_LOGGING_ ## severity == POLLY_RAW_LOGGING_FATAL) {  \
     ::abort();                                                      \
   }                                                                 \
 } while (0)
 
-#define POLLY_LOG_INFO(message) POLLY_LOG(INFO, message)
-#define POLLY_LOG_WARN(message) POLLY_LOG(WARN, message)
-#define POLLY_LOG_ERROR(message) POLLY_LOG(ERROR, message)
-#define POLLY_LOG_FATAL(message) POLLY_LOG(FATAL, message)
-
-#if defined(NDEBUG)
-
-# define POLLY_CONST_ASSERT(exp) (false ? static_cast<void>(exp) : static_cast<void>(0))
-# define POLLY_ASSERT(exp) (false ? static_cast<void>(exp) : static_cast<void>(0))
-
-#else
-
-# define POLLY_CONST_ASSERT(exp)  \
-    (POLLY_EXPECT_TRUE(exp) ? static_cast<void>(0) : [] { assert(false && #exp); }())
-
-# define POLLY_ASSERT(exp) do {                 \
-  if (POLLY_EXPECT_FALSE(!(exp))) {             \
-    POLLY_LOG_FATAL("Check "  #exp " failed");  \
-  }                                             \
+# define POLLY_RAW_CHECK(exp, msg) do {                             \
+  if (POLLY_EXPECT_FALSE(!(exp))) {                                 \
+    POLLY_RAW_LOG(FATAL, "Check "  #exp " failed: %s", msg);        \
+  }                                                                 \
 } while (0)
-
-#endif // NDEBUG
 
 namespace polly {
 namespace raw_logging_internal {

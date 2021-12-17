@@ -9,9 +9,9 @@ namespace polly {
 namespace raw_logging_internal {
 
 void RawLog(const char* fmt, ...) {
-  static const char* kTruncated = " ... (message truncated)\n";
-  static const size_t kBufferSize = 1024;
-  static size_t kTruncatedOffset = kBufferSize - strlen(kTruncated) - 1;
+  constexpr const char kTruncated[] = " ... (message truncated)\n";
+  constexpr const size_t kBufferSize = 256;
+  constexpr size_t kOffset = kBufferSize - sizeof(kTruncated);
   char buffer[kBufferSize];
 
   va_list ap;
@@ -23,7 +23,7 @@ void RawLog(const char* fmt, ...) {
     len = 0;
 
   if (len >= static_cast<int>(kBufferSize)) {
-    memcpy(buffer + kTruncatedOffset, kTruncated, strlen(kTruncated));
+    memcpy(buffer + kOffset, kTruncated, sizeof(kTruncated));
     len = kBufferSize - 1;
   }
 

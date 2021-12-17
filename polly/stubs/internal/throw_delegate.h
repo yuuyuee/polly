@@ -1,7 +1,6 @@
 #pragma once
 
 #include "stubs/internal/config.h"
-
 #include <string>
 
 namespace polly {

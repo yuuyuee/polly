@@ -12,16 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Modify
-//  1. adapted to polly
-//  2. commeneted for the initialize-list initialized functions.
-
 #include "stubs/internal/config.h"
-#include <iostream>
-// This test is a no-op when polly::optional is an alias for std::optional.
 
 #ifndef POLLY_HAVE_STD_OPTIONAL
-
 #include "stubs/optional.h"
 
 #include <string>

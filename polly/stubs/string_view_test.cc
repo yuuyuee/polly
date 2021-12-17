@@ -2,9 +2,9 @@
 
 #ifndef POLLY_HAVE_STD_STRING_VIEW
 #include "stubs/string_view.h"
+
 #include <map>
 #include <stdexcept>
-
 #include "stubs/macros.h"
 #include "gtest/gtest.h"
 
