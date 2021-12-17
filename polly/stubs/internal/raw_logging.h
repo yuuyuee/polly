@@ -1,17 +1,18 @@
 #pragma once
 
+#include "stubs/internal/config.h"
+
 #include <cassert>
 #include <cstdlib>
-#include "stubs/internal/config.h"
 
 #define POLLY_RAW_LOGGING_INFO ::polly::raw_logging_internal::LogSeverity::kInfo
 #define POLLY_RAW_LOGGING_WARN ::polly::raw_logging_internal::LogSeverity::kWarning
 #define POLLY_RAW_LOGGING_ERROR ::polly::raw_logging_internal::LogSeverity::kError
 #define POLLY_RAW_LOGGING_FATAL ::polly::raw_logging_internal::LogSeverity::kFatal
 
-#define POLLY_INTERNAL_LOG(severity, message) do {                  \
+#define POLLY_LOG(severity, message) do {                           \
   ::polly::raw_logging_internal::RawLog(                            \
-      "[%s@%d %-4s] %s\n",                                          \
+      "[%s@%d %-7s] %s\n",                                          \
       ::polly::raw_logging_internal::Basename(__FILE__),            \
       __LINE__,                                                     \
       POLLY_RAW_LOGGING_ ## severity,                               \
@@ -23,10 +24,10 @@
   }                                                                 \
 } while (0)
 
-#define POLLY_INTERNAL_LOG_INFO(message) POLLY_INTERNAL_LOG(INFO, message)
-#define POLLY_INTERNAL_LOG_WARN(message) POLLY_INTERNAL_LOG(WARN, message)
-#define POLLY_INTERNAL_LOG_ERROR(message) POLLY_INTERNAL_LOG(ERROR, message)
-#define POLLY_INTERNAL_LOG_FATAL(message) POLLY_INTERNAL_LOG(FATAL, message)
+#define POLLY_LOG_INFO(message) POLLY_LOG(INFO, message)
+#define POLLY_LOG_WARN(message) POLLY_LOG(WARN, message)
+#define POLLY_LOG_ERROR(message) POLLY_LOG(ERROR, message)
+#define POLLY_LOG_FATAL(message) POLLY_LOG(FATAL, message)
 
 #if defined(NDEBUG)
 

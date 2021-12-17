@@ -19,8 +19,10 @@ using std::in_place;
 #else // POLLY_HAVE_STD_OPTIONAL
 
 #include "stubs/macros.h"
-#include "stubs/exception.h"
-#include "stubs/internal/raw_logging.h"
+#include "stubs/internal/throw_delegate.h"
+#if !defined(POLLY_HAVE_EXCEPTIONS)
+# include "stubs/internal/raw_logging.h"
+#endif
 #include "stubs/internal/optional.h"
 
 namespace polly {
@@ -36,10 +38,13 @@ class bad_optional_access : public std::exception {
   }
 };
 
-// throw delegator
-POLLY_ATTR_NORETURN POLLY_ATTR_ALWAYS_INLINE
-inline void ThrowBadOptionalAccess() {
-  POLLY_THROW_OR_ABORT(bad_optional_access{});
+// Throw delegator
+[[noreturn]] void ThrowBadOptionalAccess() {
+#if !defined(POLLY_HAVE_EXCEPTIONS)
+  POLLY_LOG_FATAL(bad_optional_access{}.what())
+#else
+  throw bad_optional_access{};
+#endif
 }
 
 // nullopt_t

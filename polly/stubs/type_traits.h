@@ -1,9 +1,9 @@
 #pragma once
 
+#include "stubs/internal/config.h"
+
 #include <type_traits>
 #include <utility>
-
-#include "stubs/internal/config.h"
 
 namespace polly {
 template <typename...>

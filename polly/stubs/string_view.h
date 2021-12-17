@@ -17,9 +17,9 @@ using std::string_view;
 #include <limits>
 #include <ostream>
 
-#include "stubs/exception.h"
-#include "stubs/hash.h"
+#include "stubs/internal/throw_delegate.h"
 #include "stubs/internal/raw_logging.h"
+#include "stubs/hash.h"
 
 namespace polly {
 // The class template basic_string_view describes an object that can refer to
