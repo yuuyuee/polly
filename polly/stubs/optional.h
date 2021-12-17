@@ -20,9 +20,7 @@ using std::in_place;
 
 #include "stubs/macros.h"
 #include "stubs/internal/throw_delegate.h"
-#if !defined(POLLY_HAVE_EXCEPTIONS)
-# include "stubs/internal/raw_logging.h"
-#endif
+#include "stubs/internal/raw_logging.h"
 #include "stubs/internal/optional.h"
 
 namespace polly {

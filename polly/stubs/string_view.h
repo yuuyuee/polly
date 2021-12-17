@@ -100,7 +100,9 @@ public:
   // will be thrown on invalid access.
   constexpr const_reference at(size_type pos) const {
     return POLLY_EXPECT_TRUE(pos < size())
-        ? ptr_[pos] : (polly::ThrowStdOutOfRange("polly::string_view::at"), ptr_[pos]);
+        ? ptr_[pos] :
+            (polly::throw_delegate_internal::ThrowStdOutOfRange("polly::string_view::at")
+                , ptr_[pos]);
   }
 
   // Return reference to the first character in the view. the behavior is
@@ -160,7 +162,7 @@ public:
   // to by dest, where rcount is the samller of count and size() - pos.
   size_type copy(Char* buf, size_type n, size_type pos = 0) const {
     if (POLLY_EXPECT_FALSE(pos > len_))
-      polly::ThrowStdOutOfRange("polly::string_view::copy");
+      polly::throw_delegate_internal::ThrowStdOutOfRange("polly::string_view::copy");
 
     n = std::min(len_ - pos, n);
     if (n > 0)
@@ -172,7 +174,8 @@ public:
   // smaller of count and size() - pos.
   constexpr basic_string_view substr(size_type pos = 0, size_type n = npos) const {
     return POLLY_EXPECT_FALSE(pos > len_)
-        ? (polly::ThrowStdOutOfRange("polly::string_view::substr"), basic_string_view())
+        ? (polly::throw_delegate_internal::ThrowStdOutOfRange("polly::string_view::substr")
+              , basic_string_view())
         : basic_string_view(ptr_ + pos, n < len_ - pos ? n : len_ - pos);
   }
 
