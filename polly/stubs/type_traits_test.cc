@@ -29,12 +29,12 @@ TEST(VoidTTest, BasicUsage) {
 }
 
 TEST(AndTest, BasicBooleanLogic) {
-  EXPECT_TRUE(polly::And<>::value);
-  EXPECT_TRUE(polly::And<std::true_type>::value);
-  EXPECT_TRUE((polly::And<std::true_type, std::true_type>::value));
-  EXPECT_FALSE((polly::And<std::true_type, std::false_type>::value));
-  EXPECT_FALSE((polly::And<std::false_type, std::true_type>::value));
-  EXPECT_FALSE((polly::And<std::false_type, std::false_type>::value));
+  EXPECT_TRUE(polly::conjunction<>::value);
+  EXPECT_TRUE(polly::conjunction<std::true_type>::value);
+  EXPECT_TRUE((polly::conjunction<std::true_type, std::true_type>::value));
+  EXPECT_FALSE((polly::conjunction<std::true_type, std::false_type>::value));
+  EXPECT_FALSE((polly::conjunction<std::false_type, std::true_type>::value));
+  EXPECT_FALSE((polly::conjunction<std::false_type, std::false_type>::value));
 }
 
 struct TrueType {
@@ -46,31 +46,31 @@ struct FalseType {
 };
 
 TEST(AndTest, ShortCircuiting) {
-  EXPECT_FALSE((polly::And<std::true_type, std::false_type, Dummy>::value));
-  EXPECT_TRUE((std::is_base_of<FalseType, polly::And<std::true_type, FalseType, std::false_type>>::value));
-  EXPECT_TRUE((std::is_base_of<TrueType, polly::And<std::true_type, TrueType>>::value));
+  EXPECT_FALSE((polly::conjunction<std::true_type, std::false_type, Dummy>::value));
+  EXPECT_TRUE((std::is_base_of<FalseType, polly::conjunction<std::true_type, FalseType, std::false_type>>::value));
+  EXPECT_TRUE((std::is_base_of<TrueType, polly::conjunction<std::true_type, TrueType>>::value));
 }
 
 TEST(OrTest, BasicBooleanLogic) {
-  EXPECT_FALSE(polly::Or<>::value);
-  EXPECT_FALSE(polly::Or<std::false_type>::value);
-  EXPECT_TRUE((polly::Or<std::true_type, std::true_type>::value));
-  EXPECT_TRUE((polly::Or<std::true_type, std::false_type>::value));
-  EXPECT_TRUE((polly::Or<std::false_type, std::true_type>::value));
-  EXPECT_FALSE((polly::Or<std::false_type, std::false_type>::value));
+  EXPECT_FALSE(polly::disjunction<>::value);
+  EXPECT_FALSE(polly::disjunction<std::false_type>::value);
+  EXPECT_TRUE((polly::disjunction<std::true_type, std::true_type>::value));
+  EXPECT_TRUE((polly::disjunction<std::true_type, std::false_type>::value));
+  EXPECT_TRUE((polly::disjunction<std::false_type, std::true_type>::value));
+  EXPECT_FALSE((polly::disjunction<std::false_type, std::false_type>::value));
 }
 
 TEST(OrTest, ShortCircuiting) {
-  EXPECT_TRUE((polly::Or<std::false_type, std::true_type, Dummy>::value));
-  EXPECT_TRUE((std::is_base_of<TrueType, polly::Or<std::false_type, TrueType, std::true_type>>::value));
-  EXPECT_TRUE((std::is_base_of<FalseType, polly::Or<std::false_type, FalseType>>::value));
+  EXPECT_TRUE((polly::disjunction<std::false_type, std::true_type, Dummy>::value));
+  EXPECT_TRUE((std::is_base_of<TrueType, polly::disjunction<std::false_type, TrueType, std::true_type>>::value));
+  EXPECT_TRUE((std::is_base_of<FalseType, polly::disjunction<std::false_type, FalseType>>::value));
 }
 
 TEST(NotTest, BasicBooleanLogic) {
-  EXPECT_FALSE(polly::Not<std::true_type>::value);
-  EXPECT_FALSE(polly::Not<TrueType>::value);
-  EXPECT_TRUE(polly::Not<std::false_type>::value);
-  EXPECT_TRUE(polly::Not<FalseType>::value);
+  EXPECT_FALSE(polly::negation<std::true_type>::value);
+  EXPECT_FALSE(polly::negation<TrueType>::value);
+  EXPECT_TRUE(polly::negation<std::false_type>::value);
+  EXPECT_TRUE(polly::negation<FalseType>::value);
 }
 
 // all member functions are trivial

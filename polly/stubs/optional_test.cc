@@ -1564,10 +1564,10 @@ struct AnyLike {
       typename ValueType,
       typename T = typename std::decay<ValueType>::type,
       polly::Requires<
-          polly::Not<
-              polly::Or<
+          polly::negation<
+              polly::disjunction<
                 std::is_same<AnyLike, T>,
-                polly::Not<std::is_copy_constructible<T>>
+                polly::negation<std::is_copy_constructible<T>>
               >
           >
       > = true
@@ -1580,8 +1580,8 @@ struct AnyLike {
   template <typename ValueType,
       typename T = typename std::decay<ValueType>::type>
   typename std::enable_if<
-      polly::And<
-          polly::Not<std::is_same<AnyLike, T>>,
+      polly::conjunction<
+          polly::negation<std::is_same<AnyLike, T>>,
           std::is_copy_constructible<T>
       >::value,
       AnyLike&
