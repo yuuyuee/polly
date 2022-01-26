@@ -140,20 +140,20 @@ public:
   // This constructor is explicit if and only if std::is_convertible<const Up&, Tp>
   // is false.
 
-#define POLLY_OPT_REQ_IMPLICIT_CONVERT_COPY_CTOR(Tp, Up)      \
-  Requires<                                                   \
-      negation<std::is_same<Tp, Up>>,                              \
-      std::is_constructible<Tp, const Up&>,                   \
-      std::is_convertible<const Up&, Tp>,                     \
-      negation<optional_internal::converts_from_optional<Tp, Up>>  \
+#define POLLY_OPT_REQ_IMPLICIT_CONVERT_COPY_CTOR(Tp, Up)          \
+  Requires<                                                       \
+      negation<std::is_same<Tp, Up>>,                             \
+      std::is_constructible<Tp, const Up&>,                       \
+      std::is_convertible<const Up&, Tp>,                         \
+      negation<optional_internal::converts_from_optional<Tp, Up>> \
   > = true
 
-#define POLLY_OPT_REQ_EXPLICIT_CONVERT_COPY_CTOR(Tp, Up)      \
-  Requires<                                                   \
-      negation<std::is_same<Tp, Up>>,                              \
-      std::is_constructible<Tp, const Up&>,                   \
-      negation<std::is_convertible<const Up&, Tp>>,                \
-      negation<optional_internal::converts_from_optional<Tp, Up>>  \
+#define POLLY_OPT_REQ_EXPLICIT_CONVERT_COPY_CTOR(Tp, Up)          \
+  Requires<                                                       \
+      negation<std::is_same<Tp, Up>>,                             \
+      std::is_constructible<Tp, const Up&>,                       \
+      negation<std::is_convertible<const Up&, Tp>>,               \
+      negation<optional_internal::converts_from_optional<Tp, Up>> \
   > = true
 
   // Converting copy constructor implicit.
@@ -190,20 +190,20 @@ public:
   // This constructor is explicit if and only if std::is_convertible<Up&&, Tp>
   // is false.
 
-#define POLLY_OPT_REQ_IMPLICIT_CONVERT_MOVE_CTOR(Tp, Up)      \
-  Requires<                                                   \
-      negation<std::is_same<Tp, Up>>,                              \
-      std::is_constructible<Tp, Up&&>,                        \
-      std::is_convertible<Up&&, Tp>,                          \
-      negation<optional_internal::converts_from_optional<Tp, Up>>  \
+#define POLLY_OPT_REQ_IMPLICIT_CONVERT_MOVE_CTOR(Tp, Up)          \
+  Requires<                                                       \
+      negation<std::is_same<Tp, Up>>,                             \
+      std::is_constructible<Tp, Up&&>,                            \
+      std::is_convertible<Up&&, Tp>,                              \
+      negation<optional_internal::converts_from_optional<Tp, Up>> \
   > = true
 
-#define POLLY_OPT_REQ_EXPLICIT_CONVERT_MOVE_CTOR(Tp, Up)      \
-  Requires<                                                   \
-      negation<std::is_same<Tp, Up>>,                              \
-      std::is_constructible<Tp, Up&&>,                        \
-      negation<std::is_convertible<Up&&, Tp>>,                     \
-      negation<optional_internal::converts_from_optional<Tp, Up>>  \
+#define POLLY_OPT_REQ_EXPLICIT_CONVERT_MOVE_CTOR(Tp, Up)          \
+  Requires<                                                       \
+      negation<std::is_same<Tp, Up>>,                             \
+      std::is_constructible<Tp, Up&&>,                            \
+      negation<std::is_convertible<Up&&, Tp>>,                    \
+      negation<optional_internal::converts_from_optional<Tp, Up>> \
   > = true
 
   // Converting move constructor.
@@ -234,18 +234,18 @@ public:
 
 #define POLLY_OPT_REQ_IMPLICIT_VALUE_CTOR(Tp, Up)             \
   Requires<                                                   \
-      not_self<Up>,                                            \
-      not_in_place<Up>,                                         \
+      not_self<Up>,                                           \
+      not_in_place<Up>,                                       \
       std::is_constructible<Tp, Up&&>,                        \
-      std::is_convertible<Up&&, Tp>                          \
+      std::is_convertible<Up&&, Tp>                           \
   > = true
 
 #define POLLY_OPT_REQ_EXPLICIT_VALUE_CTOR(Tp, Up)             \
   Requires<                                                   \
-      not_self<Up>,                                            \
-      not_in_place<Up>,                                         \
+      not_self<Up>,                                           \
+      not_in_place<Up>,                                       \
       std::is_constructible<Tp, Up&&>,                        \
-      negation<std::is_convertible<Up&&, Tp>>                     \
+      negation<std::is_convertible<Up&&, Tp>>                 \
   > = true
 
   // Value constructor.
@@ -289,7 +289,7 @@ public:
       not_self<Up>,                                           \
       std::is_constructible<Tp, Up>,                          \
       std::is_assignable<Tp&, Up>,                            \
-      negation<conjunction<                                                \
+      negation<conjunction<                                   \
           std::is_scalar<Tp>,                                 \
           std::is_same<Tp, typename std::decay<Up>::type>     \
       >>                                                      \
@@ -338,22 +338,22 @@ public:
   //       std::is_assignable<T&, const Up&> are both true.
   //    2. For value move assignment, std::is_constructible<Tp, Up> and
   //       std::is_assignable<T&, Up> are both true.
-#define POLLY_OPT_REQ_VALUE_COPY_ASSIGNMENT(Tp, Up)           \
-  Requires<                                                   \
-      negation<std::is_same<Tp, Up>>,                              \
-      negation<optional_internal::converts_from_optional<Tp, Up>>, \
-      negation<optional_internal::assigns_from_optional<Tp, Up>>,  \
-      std::is_constructible<Tp, const Up&>,                   \
-      std::is_assignable<Tp&, const Up&>                      \
+#define POLLY_OPT_REQ_VALUE_COPY_ASSIGNMENT(Tp, Up)                 \
+  Requires<                                                         \
+      negation<std::is_same<Tp, Up>>,                               \
+      negation<optional_internal::converts_from_optional<Tp, Up>>,  \
+      negation<optional_internal::assigns_from_optional<Tp, Up>>,   \
+      std::is_constructible<Tp, const Up&>,                         \
+      std::is_assignable<Tp&, const Up&>                            \
   > = true
 
-#define POLLY_OPT_REQ_VALUE_MOVE_ASSIGNMENT(Tp, Up)           \
-  Requires<                                                   \
-      negation<std::is_same<Tp, Up>>,                              \
-      negation<optional_internal::converts_from_optional<Tp, Up>>, \
-      negation<optional_internal::assigns_from_optional<Tp, Up>>,  \
-      std::is_constructible<Tp, Up>,                          \
-      std::is_assignable<Tp&, Up>                             \
+#define POLLY_OPT_REQ_VALUE_MOVE_ASSIGNMENT(Tp, Up)                 \
+  Requires<                                                         \
+      negation<std::is_same<Tp, Up>>,                               \
+      negation<optional_internal::converts_from_optional<Tp, Up>>,  \
+      negation<optional_internal::assigns_from_optional<Tp, Up>>,   \
+      std::is_constructible<Tp, Up>,                                \
+      std::is_assignable<Tp&, Up>                                   \
   > = true
 
   // Value copy assignment operators
