@@ -19,8 +19,9 @@ using std::in_place;
 #else // POLLY_HAVE_STD_OPTIONAL
 
 #include "stubs/macros.h"
-#include "stubs/internal/throw_delegate.h"
+#if !defined(POLLY_HAVE_EXCEPTIONS)
 #include "stubs/internal/raw_logging.h"
+#endif
 #include "stubs/internal/optional.h"
 
 namespace polly {
@@ -28,8 +29,8 @@ namespace polly {
 // object that does not contain a value.
 class bad_optional_access : public std::exception {
  public:
-  bad_optional_access() = default;
-  virtual ~bad_optional_access() = default;
+  bad_optional_access() noexcept {}
+  virtual ~bad_optional_access() noexcept override = default;
 
   virtual const char* what() const noexcept override {
     return "optional has no value";
@@ -37,9 +38,9 @@ class bad_optional_access : public std::exception {
 };
 
 // Throw delegator
-[[noreturn]] void ThrowBadOptionalAccess() {
+[[noreturn]] inline void ThrowBadOptionalAccess() {
 #if !defined(POLLY_HAVE_EXCEPTIONS)
-  POLLY_LOG_FATAL(bad_optional_access{}.what())
+  POLLY_LOG_FATAL(bad_optional_access{}.what());
 #else
   throw bad_optional_access{};
 #endif
