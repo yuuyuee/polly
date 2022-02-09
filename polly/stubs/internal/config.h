@@ -50,8 +50,6 @@ static_assert(POLLY_GNUC_PREREQ(4, 8), "This library require GNUC version at lea
 // Checks whether the compiler both supports and enables exceptions.
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
 # define POLLY_HAVE_EXCEPTIONS 1
-#else
-# define POLLY_HAVE_EXCEPTIONS 0
 #endif
 
 // Checks the endianness of the platform.

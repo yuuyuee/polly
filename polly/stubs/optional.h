@@ -33,14 +33,14 @@ class bad_optional_access : public std::exception {
   virtual ~bad_optional_access() noexcept override = default;
 
   virtual const char* what() const noexcept override {
-    return "optional has no value";
+    return "Bad optional access";
   }
 };
 
 // Throw delegator
 [[noreturn]] inline void ThrowBadOptionalAccess() {
 #if !defined(POLLY_HAVE_EXCEPTIONS)
-  POLLY_LOG_FATAL(bad_optional_access{}.what());
+  POLLY_RAW_LOG(FATAL, bad_optional_access{}.what());
 #else
   throw bad_optional_access{};
 #endif

@@ -12,7 +12,7 @@ namespace throw_delegate_internal {
 #if defined(POLLY_HAVE_EXCEPTIONS)
 # define POLLY_THROW_OR_ABORT(ex) throw ex
 #else // POLLY_HAVE_EXCEPTIONS
-# define POLLY_THROW_OR_ABORT(ex) POLLY_INTERNAL_LOG_FATAL(ex.what())
+# define POLLY_THROW_OR_ABORT(ex) POLLY_RAW_LOG(FATAL, ex.what())
 #endif // POLLY_HAVE_EXCEPTIONS
 
 // std::logic_error

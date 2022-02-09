@@ -35,7 +35,7 @@ public:
 // Throw delegator
 [[noreturn]] inline void ThrowBadAnyCast() {
 #if !defined(POLLY_HAVE_EXCEPTIONS)
-  POLLY_LOG_FATAL(bad_any_cast{}.what());
+  POLLY_RAW_LOG(FATAL, bad_any_cast{}.what());
 #else
   throw bad_any_cast{};
 #endif
