@@ -12,12 +12,12 @@
 
 #define POLLY_RAW_LOG(severity, fmt, ...) do {                      \
   ::polly::raw_logging_internal::RawLog(                            \
-      "[%s:%d @ %-5s] " fmt "\n",                                   \
       ::polly::raw_logging_internal::Basename(                      \
           __FILE__, sizeof(__FILE__) - 1),                          \
       __LINE__,                                                     \
       ::polly::raw_logging_internal::StrLogSeverity(                \
           POLLY_RAW_LOGGING_ ## severity),                          \
+      fmt,                                                          \
       ## __VA_ARGS__);                                              \
                                                                     \
   if (POLLY_RAW_LOGGING_ ## severity == POLLY_RAW_LOGGING_FATAL) {  \
@@ -54,7 +54,7 @@ constexpr const char* Basename(const char* fname, int offset) {
       ? fname + offset : Basename(fname,  offset - 1);
 }
 
-void RawLog(const char* fmt, ...);
+void RawLog(const char* fname, int line, const char* severity, const char* fmt, ...);
 
 } // namespace raw_logging_internal
 } // namespace polly
