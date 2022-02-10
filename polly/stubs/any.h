@@ -25,7 +25,7 @@ namespace polly {
 class bad_any_cast: public std::bad_cast {
 public:
   bad_any_cast() noexcept {}
-  virtual ~bad_any_cast() noexcept override = default;
+  virtual ~bad_any_cast() noexcept = default;
 
   virtual const char* what() const noexcept override {
     return "Bad any cast";

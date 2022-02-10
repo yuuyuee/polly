@@ -30,7 +30,7 @@ namespace polly {
 class bad_optional_access : public std::exception {
  public:
   bad_optional_access() noexcept {}
-  virtual ~bad_optional_access() noexcept override = default;
+  virtual ~bad_optional_access() noexcept = default;
 
   virtual const char* what() const noexcept override {
     return "Bad optional access";
