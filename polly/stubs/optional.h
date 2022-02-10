@@ -37,7 +37,7 @@ class bad_optional_access : public std::exception {
   }
 };
 
-// Throw delegator
+// Throw delegate
 [[noreturn]] inline void ThrowBadOptionalAccess() {
 #if !defined(POLLY_HAVE_EXCEPTIONS)
   POLLY_RAW_LOG(FATAL, bad_optional_access{}.what());

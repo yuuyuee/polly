@@ -14,11 +14,15 @@ using std::make_any;
 
 #else // POLLY_HAVE_STD_ANY
 
+#if defined(POLLY_HAVE_RTTI)
 #include <typeinfo>
+#endif
 
 #if !defined(POLLY_HAVE_EXCEPTIONS)
 #include "stubs/internal/raw_logging.h"
 #endif
+
+#include "stubs/utility.h"
 
 namespace polly {
 // Exception thrown by the value-returning forms of any_cast on a type mismatch.
@@ -32,7 +36,7 @@ public:
   }
 };
 
-// Throw delegator
+// Throw delegate
 [[noreturn]] inline void ThrowBadAnyCast() {
 #if !defined(POLLY_HAVE_EXCEPTIONS)
   POLLY_RAW_LOG(FATAL, bad_any_cast{}.what());
@@ -40,6 +44,24 @@ public:
   throw bad_any_cast{};
 #endif
 }
+
+// The class any describes a type-safe container for single values of any type.
+// An object of class any stores an instance of any type that satisfies the
+// constructor requirements or is empty, and this is referred to as the state
+// of the class any object. The stored instance is called the contained object.
+// Two states are equivalent if they are either both empty or if both are not
+// empty and if the contained objects are equivalent.
+class any {
+public:
+
+private:
+
+};
+
+// Overloads the std::swap algorithm for any.
+// Swaps the content of two any objects by calling lhs.swap(rhs)
+void swap(any&, any&) noexcept;
+
 
 } // namespace polly
 

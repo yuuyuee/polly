@@ -48,12 +48,22 @@ static_assert(POLLY_GNUC_PREREQ(4, 8), "This library require GNUC version at lea
 #endif
 
 // Checks whether the compiler both supports and enables exceptions.
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
+#ifdef POLLY_HAVE_EXCEPTIONS
+# error "POLLY_HAVE_EXCEPTIONS can not be directly set."
+#elif defined(__cpp_exceptions) || defined(__EXCEPTIONS)
 # define POLLY_HAVE_EXCEPTIONS 1
 #endif
 
+#ifdef POLLY_HAVE_RTTI
+# error "POLLY_HAVE_RTTI can not be directly set."
+#elif !defined(__GNUC__) || defined(__GXX_RTTI)
+# define POLLY_HAVE_RTTI 1
+#endif
+
 // Checks the endianness of the platform.
-#if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
+#if defined(POLLY_IS_LITTLE_ENDIAN) || defined(POLLY_IS_BIG_ENDIAN)
+# error "POLLY_IS_LITTLE_ENDIAN or POLLY_IS_BIG_ENDIAN can not be directly set."
+#elif defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
     __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 # define POLLY_IS_LITTLE_ENDIAN 1
 #else
