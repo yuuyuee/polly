@@ -14,6 +14,7 @@ using std::make_any;
 
 #else // POLLY_HAVE_STD_ANY
 
+#include <initializer_list>
 #if defined(POLLY_HAVE_RTTI)
 #include <typeinfo>
 #endif
@@ -21,7 +22,7 @@ using std::make_any;
 #if !defined(POLLY_HAVE_EXCEPTIONS)
 #include "stubs/internal/raw_logging.h"
 #endif
-
+#include "stubs/internal/type_id.h"
 #include "stubs/utility.h"
 
 namespace polly {
@@ -53,6 +54,22 @@ public:
 // empty and if the contained objects are equivalent.
 class any {
 public:
+  constexpr any() noexcept;
+  any(const any& other);
+  any(any&& other) noexcept;
+
+  template <typename Tp>
+  any(Tp&& value);
+
+  template <typename Tp, typename... Args>
+  explicit any(in_place_type_t<Tp>, Args&&... args);
+
+  template <typename Tp, typename Up, typename... Args>
+  explicit any(in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args);
+
+  ~any();
+
+  // Modifier
 
 private:
 
