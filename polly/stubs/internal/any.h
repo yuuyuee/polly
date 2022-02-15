@@ -14,6 +14,8 @@ namespace any_internal {
 // may only be applied to types for which std::is_nothrow_move_constructible
 // returns true.
 union Storage {
+  constexpr Storage() noexcept: ptr(nullptr) {}
+
   // uses small-object optimization
   alignas(sizeof(void*)) char buffer[sizeof(void*)];
   // creates object on the heap
@@ -28,12 +30,23 @@ struct is_small_obj
         alignof(Tp) <= alignof(void*) &&
         std::is_nothrow_move_constructible<Tp>::value> {};
 
+struct Args {
+  void* ptr;
+  const std::type_info* typeinfo;
+  Storage* storage;
+};
+
+enum Ops {
+  Get, GetTypeInfo, Copy, Move, Destruct
+};
+
+// contained object
 template <typename Tp, bool = is_small_obj<Tp>::value>
-struct Operator {
+struct Operators {
   // Constructors and destructor
-  template <typename Up>
-  static void Construct(Storage& storage, Up&& value) {
-    storage.ptr = new Tp(std::forward<Up>(value));
+  template <typename VTp>
+  static void Construct(Storage& storage, VTp&& value) {
+    storage.ptr = new Tp(std::forward<VTp>(value));
   }
 
   template <typename... Args>
@@ -41,71 +54,73 @@ struct Operator {
     storage.ptr = new Tp(std::forward<Args>(args)...);
   }
 
-  static void CopyConstruct(Storage& storage, const Tp* ptr) {
-    storage.ptr = new Tp(*ptr);
+  static void Operator(Ops ops, const Storage* self, Args* args) {
+    auto ptr = reinterpret_cast<const Tp*>(self->ptr);
+    switch (ops) {
+    case Ops::Get:
+      args->ptr = const_cast<Tp*>(ptr);
+      break;
+    case Ops::GetTypeInfo:
+#ifdef POLLY_HAVE_RTTI
+      args->typeinfo = &typeid(Tp);
+#endif
+      break;
+    case Ops::Copy:
+      args->storage->ptr = new Tp(*ptr);
+      break;
+    case Ops::Move:
+      args->storage->ptr = ptr;
+      break;
+    case Ops::Destruct:
+      delete ptr;
+      break;
+    }
+  }
+};
+
+// in-place contained object
+template <typename Tp>
+struct Operators<Tp, true> {
+  template <typename VTp>
+  static void Construct(Storage& storage, VTp&& value) {
+    ::new(storage.buffer) Tp(std::forward<VTp>(value));
   }
 
-  static void MoveConstruct(Storage& storage, Tp* ptr) {
-    storage.ptr = ptr;
+  template <typename... Args>
+  static void Construct(Storage& storage, Args&&... args) {
+    ::new(storage.buffer) Tp(std::forward<Args>(args)...);
   }
 
-  static void Destruct(Storage& storage) {
-    delete storage.ptr;
-  }
-
-  // Accessers
-  Tp* get(Storage& storage) {
-    return reinterpret_cast<Tp*>(storage.ptr);
-  }
-
-  const Tp* get(const Storage& storage) {
-    return reinterpret_cast<const Tp*>(storage.ptr);
-  }
-
-  // type_info
-  const std::type_info& Type() {
-    return typeid(Tp);
+  static void Operator(Ops ops, const Storage* self, Args* args) {
+    auto ptr = reinterpret_cast<const Tp*>(self->buffer);
+    switch (ops) {
+    case Get:
+      args->ptr = const_cast<Tp*>(ptr);
+      break;
+    case Ops::GetTypeInfo:
+#ifdef POLLY_HAVE_RTTI
+      args->typeinfo = &typeid(Tp);
+#endif
+      break;
+    case Ops::Copy:
+      ::new (&args->storage->buffer) Tp(*ptr);
+      break;
+    case Ops::Move:
+      ::new (&args->storage->buffer) Tp(std::move(*const_cast<Tp*>(ptr)));
+      ptr->~Tp();
+      break;
+    case Ops::Destruct:
+      ptr->~Tp();
+      break;
+    }
   }
 };
 
 template <typename Tp>
-struct Operator<Tp, true> {
-  template <typename Up>
-  static void construct(Storage& storage, Up&& value) {
-    ::new(storage.buffer) Tp(std::forward<Up>(value));
-  }
+struct is_in_place_type: public std::false_type {};
 
-  template <typename... Args>
-  static void construct(Storage& storage, Args&&... args) {
-    ::new(storage.buffer) Tp(std::forward<Args>(args)...);
-  }
-
-  static void CopyConstruct(Storage& storage, const Tp* ptr) {
-    ::new(storage.buffer) Tp(*ptr);
-  }
-
-  static void MoveConstruct(Storage& storage, Tp* ptr) {
-    ::new(storage.buffer) Tp(std::move(*ptr));
-    ptr->~Tp();
-  }
-
-  static void Destruct(Storage& storage) {
-    get(storage)->~Tp();
-  }
-
-  Tp* get(Storage& storage) {
-    return reinterpret_cast<Tp*>(storage.buffer);
-  }
-
-  const Tp* get(const Storage& storage) {
-    return reinterpret_cast<const Tp*>(storage.buffer);
-  }
-
-  const std::type_info& Type() {
-    return typeid(Tp);
-  }
-};
-
+template <typename Tp>
+struct is_in_place_type<in_place_type_t<Tp>>: public true_type {};
 
 } // namespace any_internal
 } // namespace polly

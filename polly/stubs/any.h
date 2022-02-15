@@ -54,34 +54,105 @@ public:
 class any {
 public:
   // Constructs an empty object.
-  constexpr any() noexcept: empty_(true) {}
+  constexpr any() noexcept: operator_(nullptr) {}
+
+#define POLLY_ANY_REQ_CTOR(Tp, args)  \
+  Requires<                           \
+      std::is_copy_constructible<Tp>, \
+      std::is_constructible<Tp, args> \
+  > = true
+
+  template <typename Tp,
+            typename... Args,
+            typename VTp = typename std::decay<Tp>::type,
+            POLLY_ANY_REQ_CTOR(VTp, Args...)>
+  explicit any(in_place_type_t<Tp>, Args&&... args)
+      : operator_(&any_internal::Operator<VTp>::Operator) {
+    any_internal::Construct(storage_, std::forward<Args>(args)...);
+  }
+
+#define POLLY_ANY_REQ_CTOR2(Tp, Il, args)  \
+  Requires<                           \
+      std::is_copy_constructible<Tp>, \
+      std::is_constructible<Tp, Il, args> \
+  > = true
+
+  template <typename Tp,
+            typename Up,
+            typename... Args,
+            typename VTp = typename std::decay<Tp>::type,
+            POLLY_ANY_REQ_CTOR2(VTp, std::initializer_list<Up>, Args...)>
+  explicit any(in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args)
+      : operator_(&any_internal::Operator<VTp>::Operator) {
+    any_internal::Construct(storage_, il, std::forward<Args>(args)...);
+  }
+
+#define POLLY_ANY_REQ_COPY_CTOR(Tp)                 \
+  Requires<                                         \
+      std::is_copy_constructible<Tp>,               \
+      negation<std::is_same<Tp, any>>,              \
+      negation<any_internal::is_in_place_type<Tp>>  \
+  > = true
+
+  template <typename Tp,
+            typename VTp = typename std::decay<Tp>::type,
+            POLLY_ANY_REQ_TYPE_CHECK(VTp)>
+  any(Tp&& value): operator_(&any_internal::Operators<VTp>::Operator) {
+    any_internal::Operators<VTp>::Construct(storage_, std::forward<Tp>(value));
+  }
+
+  ~any() { reset(); }
 
   // Copies or moves content of other into a new instance, so that any content
   // is equivalent in both type and value to those of other prior to the
   // constructor call, or empty if other is empty.
   any(const any& other) {
-
+    if (other.has_value()) {
+      any_internal::Args args;
+      args.storage = &storage_;
+      other.operator_(any_internal::Ops::Copy, &other.storage_, &args);
+      operator_ = other.operator_;
+    } else {
+      operator_ = nullptr;
+    }
   }
 
-  any(any&& other) noexcept;
+  any(any&& other) noexcept {
+    if (other.has_value()) {
+      any_internal::Args args;
+      args.storage = &storage_;
+      other.operator_(any_internal::Ops::Move, &other.storage_, &args);
+      operator_ = other.operator_;
+      other.operator_ = nullptr;
+    } else {
+      operator_ = nullptr;
+    }
+  }
 
-  template <typename Tp>
-  any(Tp&& value);
+  any& operator=(const any& rhs) {
+    *this = any(rhs);
+    return *this;
+  }
 
-  template <typename Tp, typename... Args>
-  explicit any(in_place_type_t<Tp>, Args&&... args);
+  any& operator=(any&& rhs) noexcept {
+    if (rhs.has_value()) {
+      reset();
+      Args args;
+      args.storage = &storage_;
+      rhs.operator_(any_internal::Ops::Move, &rhs.storage_, &args);
+      operator_ = rhs.operator_;
+      rhs.operator_ = nullptr;
+    } else {
+      reset();
+    }
+    return *this;
+  }
 
-  template <typename Tp, typename Up, typename... Args>
-  explicit any(in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args);
-
-  ~any();
-
-  any& operator=(const any& rhs);
-
-  any& operator=(any&& rhs) noexcept;
-
-  template <typename Tp>
-  any& operator=(Tp&& rhs);
+  template <typename Tp, POLLY_ANY_REQ_COPY_CTOR(tyepname std::decay<Tp>::type)>
+  any& operator=(Tp&& rhs) {
+    *this = any(std::forward<Tp>(rhs));
+    return *this;
+  }
 
   // Modifiers
   template <typename Tp, typename... Args>
@@ -92,7 +163,8 @@ public:
 
   void reset() noexcept {
     if (has_value()) {
-
+      operator_(any_internal::Ops::Destruct, storage_, nullptr);
+      operator_ = nullptr;
     }
   }
 
@@ -100,31 +172,25 @@ public:
 
   // Observers
   bool has_value() const noexcept {
-    return empty_;
+    return operator_ != nullptr;
   }
 
 #ifdef POLLY_HAVE_RTTI
-  const std::type_info& type() const noexcept;
+  const std::type_info& type() const noexcept {
+    if (has_value()) {
+      Args args;
+      operator_(any_internal::Ops::GetTypeInfo, nullptr, &args);
+      return *args.typeinfo;
+    }
+    return typeid(void);
+  }
 #endif
 
 private:
-  template <typename Tp>
-  using normalized_type = remove_cvref_t<Tp>;
-
-
-
-
-
-
-  // contained object
-  template <typename Tp, bool = is_small_obj<Tp>::value>
-  struct AnyOperator {
-  };
-
-  // in-place contained object
-  template <typename Tp>
-  struct AnyOperator<Tp, true> {
-  };
+  using operator_fn =
+      void (*)(any_internal::Ops, const any_internal::Storage*, any_internal::Args*);
+  operator_fn operator_;
+  any_internal::Storage storage_;
 };
 
 // Overloads the std::swap algorithm for any.
