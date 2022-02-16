@@ -24,7 +24,13 @@ using std::make_any;
 
 namespace polly {
 // Exception thrown by the value-returning forms of any_cast on a type mismatch.
-class bad_any_cast: public std::bad_cast {
+class bad_any_cast
+#ifdef POLLY_HAVE_RTTI
+    : public std::bad_cast
+#else
+    : public std::exception
+#endif //POLLY_HAVE_RTTI
+{
 public:
   bad_any_cast() noexcept {}
   virtual ~bad_any_cast() noexcept = default;
@@ -36,7 +42,7 @@ public:
 
 // Throw delegate
 [[noreturn]] inline void ThrowBadAnyCast() {
-#if !defined(POLLY_HAVE_EXCEPTIONS)
+#ifndef POLLY_HAVE_EXCEPTIONS
   POLLY_RAW_LOG(FATAL, bad_any_cast{}.what());
 #else
   throw bad_any_cast{};
@@ -58,7 +64,7 @@ void* any_cast_helper(const any*) noexcept;
 // empty and if the contained objects are equivalent.
 class any {
 public:
-  // Constructors & Destructor
+  // Constructs an empty object.
   constexpr any() noexcept: operator_(nullptr) {}
 
 #define POLLY_ANY_REQ_CTOR(Tp, args)  \
@@ -67,6 +73,7 @@ public:
       std::is_constructible<Tp, args> \
   > = true
 
+  // Constructs an object with initial content an object of type VTp.
   template <typename Tp,
             typename... Args,
             typename VTp = typename std::decay<Tp>::type,
@@ -82,6 +89,7 @@ public:
       std::is_constructible<Tp, Il, args> \
   > = true
 
+  // Constructs an object with initial content an object of type VTp.
   template <typename Tp,
             typename Up,
             typename... Args,
@@ -99,6 +107,7 @@ public:
       negation<any_internal::is_in_place_type<Tp>>  \
   > = true
 
+  // Constructs an object with initial content an object of type VTp.
   template <typename Tp,
             typename VTp = typename std::decay<Tp>::type,
             POLLY_ANY_REQ_COPY_CTOR(VTp)>
@@ -108,9 +117,9 @@ public:
 
   ~any() { reset(); }
 
-  // Copies or moves content of other into a new instance, so that any content
-  // is equivalent in both type and value to those of other prior to the
-  // constructor call, or empty if other is empty.
+  // Copies content of other into a new instance, so that any content is equivalent
+  // in both type and value to those of other prior to the constructor call,
+  // or empty if other is empty.
   any(const any& other) {
     if (other.has_value()) {
       any_internal::Args args;
@@ -122,6 +131,9 @@ public:
     }
   }
 
+  // Moves content of other into a new instance, so that any content is equivalent
+  // in both type and value to those of other prior to the constructor call,
+  // or empty if other is empty.
   any(any&& other) noexcept {
     if (other.has_value()) {
       any_internal::Args args;
@@ -164,6 +176,7 @@ public:
 
   // Modifiers
 
+  // Change the contained object, constructing the new object directly.
   template <typename Tp,
             typename... Args,
             typename VTp = typename std::decay<Tp>::type,
@@ -177,6 +190,7 @@ public:
     return *static_cast<VTp*>(res.obj);
   }
 
+  // Change the contained object, constructing the new object directly.
   template <typename Tp,
             typename Up,
             typename... Args,
@@ -191,6 +205,7 @@ public:
     return *static_cast<VTp*>(res.obj);
   }
 
+  // Destroys contained object.
   void reset() noexcept {
     if (has_value()) {
       operator_(any_internal::Ops::Destruct, &storage_, nullptr);
@@ -198,6 +213,7 @@ public:
     }
   }
 
+  // Swaps two any objects.
   void swap(any& other) noexcept {
     if (this == &other || (!has_value() && !other.has_value()))
       return;
@@ -207,11 +223,14 @@ public:
   }
 
   // Observers
+
+  // Checks if object holds a value.
   bool has_value() const noexcept {
     return operator_ != nullptr;
   }
 
 #ifdef POLLY_HAVE_RTTI
+  // Returns the typeid of the contained value.
   const std::type_info& type() const noexcept {
     if (has_value()) {
       any_internal::Args args;
@@ -237,6 +256,7 @@ inline void swap(any& lhs, any& rhs) noexcept {
   lhs.swap(rhs);
 }
 
+// Type-safe access to the contained object.
 template <typename Tp>
 Tp any_cast(const any& operand) {
   using Up = remove_cvref_t<Tp>;
@@ -307,6 +327,7 @@ inline const Tp* any_cast(const any* operand) noexcept {
       : nullptr;
 }
 
+// Creates an any object.
 template <typename Tp, typename... Args>
 any make_any(Args&&... args) {
   return any(in_place_type<Tp>, std::forward<Args>(args)...);

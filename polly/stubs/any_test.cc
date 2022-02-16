@@ -69,7 +69,9 @@ TEST(AnyTest, Noexcept) {
   static_assert(std::is_nothrow_move_constructible<polly::any>(), "");
   static_assert(std::is_nothrow_move_assignable<polly::any>(), "");
   static_assert(noexcept(std::declval<polly::any&>().has_value()), "");
+#ifdef POLLY_HAVE_RTTI
   static_assert(noexcept(std::declval<polly::any&>().type()), "");
+#endif // POLLY_HAVE_RTTI
   static_assert(noexcept(polly::any_cast<int>(std::declval<polly::any*>())), "");
   static_assert(noexcept(std::declval<polly::any&>().swap(std::declval<polly::any&>())), "");
 
@@ -86,6 +88,7 @@ TEST(AnyTest, HasValue) {
   EXPECT_FALSE(o.has_value());
 }
 
+#ifdef POLLY_HAVE_RTTI
 TEST(AnyTest, Type) {
   polly::any o;
   EXPECT_EQ(typeid(void), o.type());
@@ -96,6 +99,7 @@ TEST(AnyTest, Type) {
   o.reset();
   EXPECT_EQ(typeid(void), o.type());
 }
+#endif // POLLY_HAVE_RTTI
 
 TEST(AnyTest, EmptyPointerCast) {
   // pointer-to-unqualified overload
@@ -289,16 +293,14 @@ TEST(AnyTest, EmplaceIlist) {
 
   static_assert(!CanEmplaceAny<int, std::initializer_list<int>>::value, "");
   static_assert(!CanEmplaceAny<MoveOnlyWithListConstructor,
-                               std::initializer_list<int>, int>::value,
-                "");
+                               std::initializer_list<int>, int>::value, "");
 }
 
 TEST(AnyTest, EmplaceIlistWithCV) {
   const CopyOnly copy_only{};
   polly::any o;
   EXPECT_TRUE((std::is_same<decltype(o.emplace<const volatile ListMoveOnlyCopyOnly>(
-                        {1, 2, 3, 4}, MoveOnly(), copy_only)),
-                    ListMoveOnlyCopyOnly&>::value));
+      {1, 2, 3, 4}, MoveOnly(), copy_only)), ListMoveOnlyCopyOnly&>::value));
   ListMoveOnlyCopyOnly& emplace_result =
       o.emplace<const volatile ListMoveOnlyCopyOnly>({1, 2, 3, 4}, MoveOnly(), copy_only);
   ListMoveOnlyCopyOnly& v = polly::any_cast<ListMoveOnlyCopyOnly&>(o);
@@ -311,6 +313,18 @@ TEST(AnyTest, EmplaceNoArgs) {
   polly::any o;
   o.emplace<int>();
   EXPECT_EQ(0, polly::any_cast<int>(o));
+}
+
+TEST(AnyTest, Swap) {
+  polly::any f0(100);
+  polly::any f1(200);
+
+  EXPECT_EQ(polly::any_cast<int>(f0), 100);
+  EXPECT_EQ(polly::any_cast<int>(f1), 200);
+  using std::swap;
+  swap(f0, f1);
+  EXPECT_EQ(polly::any_cast<int>(f0), 200);
+  EXPECT_EQ(polly::any_cast<int>(f1), 100);
 }
 
 TEST(AnyTest, ConversionConstruction) {
@@ -355,8 +369,7 @@ struct WeirdConstructor42 {
   WeirdConstructor42(const WeirdConstructor42& other) : value(other.value) {}
 
   // L-value "weird" constructor (used when given an l-value)
-  WeirdConstructor42(WeirdConstructor42& /*other*/)  // NOLINT(runtime/references)
-      : value(42) {}
+  WeirdConstructor42(WeirdConstructor42&) : value(42) {}
 
   int value;
 };
@@ -536,10 +549,6 @@ TEST(AnyTest, Reset) {
 
   o.emplace<char>();
   EXPECT_TRUE(o.has_value());
-}
-
-TEST(AnyTest, ConversionConstructionCausesOneCopy) {
-  // TODO
 }
 
 #ifdef POLLY_HAVE_EXCEPTIONS
