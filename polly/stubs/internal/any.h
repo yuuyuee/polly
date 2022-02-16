@@ -69,7 +69,7 @@ struct Operators {
       args->storage->ptr = new Tp(*ptr);
       break;
     case Ops::Move:
-      args->storage->ptr = ptr;
+      args->storage->ptr = const_cast<Tp*>(ptr);
       break;
     case Ops::Destruct:
       delete ptr;
@@ -94,7 +94,7 @@ struct Operators<Tp, true> {
   static void Operator(Ops ops, const Storage* self, Args* args) {
     auto ptr = reinterpret_cast<const Tp*>(self->buffer);
     switch (ops) {
-    case Get:
+    case Ops::Get:
       args->obj = const_cast<Tp*>(ptr);
       break;
     case Ops::GetTypeInfo:
@@ -120,7 +120,7 @@ template <typename Tp>
 struct is_in_place_type: public std::false_type {};
 
 template <typename Tp>
-struct is_in_place_type<in_place_type_t<Tp>>: public true_type {};
+struct is_in_place_type<in_place_type_t<Tp>>: public std::true_type {};
 
 } // namespace any_internal
 } // namespace polly

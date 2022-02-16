@@ -16,11 +16,11 @@ using std::make_any;
 
 #include <initializer_list>
 
+#include "stubs/utility.h"
 #include "stubs/internal/any.h"
 #if !defined(POLLY_HAVE_EXCEPTIONS)
 #include "stubs/internal/raw_logging.h"
 #endif
-#include "stubs/internal/type_id.h"
 
 namespace polly {
 // Exception thrown by the value-returning forms of any_cast on a type mismatch.
@@ -43,9 +43,11 @@ public:
 #endif
 }
 
+class any;
+
 namespace any_internal {
 template <typename>
-void* any_cast_helper(const any*);
+void* any_cast_helper(const any*) noexcept;
 } // namespace any_internal
 
 // The class any describes a type-safe container for single values of any type.
@@ -70,8 +72,8 @@ public:
             typename VTp = typename std::decay<Tp>::type,
             POLLY_ANY_REQ_CTOR(VTp, Args...)>
   explicit any(in_place_type_t<Tp>, Args&&... args)
-      : operator_(any_internal::Operator<VTp>::Operator) {
-    any_internal::Construct(&storage_, std::forward<Args>(args)...);
+      : operator_(any_internal::Operators<VTp>::Operator) {
+    any_internal::Operators<VTp>::Construct(&storage_, std::forward<Args>(args)...);
   }
 
 #define POLLY_ANY_REQ_CTOR2(Tp, Il, args) \
@@ -86,8 +88,8 @@ public:
             typename VTp = typename std::decay<Tp>::type,
             POLLY_ANY_REQ_CTOR2(VTp, std::initializer_list<Up>, Args...)>
   explicit any(in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args)
-      : operator_(any_internal::Operator<VTp>::Operator) {
-    any_internal::Construct(&storage_, il, std::forward<Args>(args)...);
+      : operator_(any_internal::Operators<VTp>::Operator) {
+    any_internal::Operators<VTp>::Construct(&storage_, il, std::forward<Args>(args)...);
   }
 
 #define POLLY_ANY_REQ_COPY_CTOR(Tp)                 \
@@ -99,7 +101,7 @@ public:
 
   template <typename Tp,
             typename VTp = typename std::decay<Tp>::type,
-            POLLY_ANY_REQ_TYPE_CHECK(VTp)>
+            POLLY_ANY_REQ_COPY_CTOR(VTp)>
   any(Tp&& value): operator_(any_internal::Operators<VTp>::Operator) {
     any_internal::Operators<VTp>::Construct(&storage_, std::forward<Tp>(value));
   }
@@ -148,12 +150,13 @@ public:
         rhs.operator_(any_internal::Ops::Move, &rhs.storage_, &args);
         operator_ = rhs.operator_;
         rhs.operator_ = nullptr;
+      }
     }
 
     return *this;
   }
 
-  template <typename Tp, POLLY_ANY_REQ_COPY_CTOR(tyepname std::decay<Tp>::type)>
+  template <typename Tp, POLLY_ANY_REQ_COPY_CTOR(typename std::decay<Tp>::type)>
   any& operator=(Tp&& rhs) {
     *this = any(std::forward<Tp>(rhs));
     return *this;
@@ -168,10 +171,10 @@ public:
   VTp& emplace(Args&&... args) {
     reset();
     any_internal::Operators<VTp>::Construct(&storage_, std::forward<Args>(args)...);
-    operator_ = any_internal::Operator<VTp>::Operator;
-    any_internal::Args args;
-    operator_(any_internal::Ops::Get, &storage_, &args);
-    return *static_cast<VTp*>(args.obj);
+    operator_ = any_internal::Operators<VTp>::Operator;
+    any_internal::Args res;
+    operator_(any_internal::Ops::Get, &storage_, &res);
+    return *static_cast<VTp*>(res.obj);
   }
 
   template <typename Tp,
@@ -182,15 +185,15 @@ public:
   VTp& emplace(std::initializer_list<Up> il, Args&&... args) {
     reset();
     any_internal::Operators<VTp>::Construct(&storage_, il, std::forward<Args>(args)...);
-    operator_ = any_internal::Operator<VTp>::Operator;
-    any_internal::Args args;
-    operator_(any_internal::Ops::Get, &storage_, &args);
-    return *static_cast<VTp*>(args.obj);
+    operator_ = any_internal::Operators<VTp>::Operator;
+    any_internal::Args res;
+    operator_(any_internal::Ops::Get, &storage_, &res);
+    return *static_cast<VTp*>(res.obj);
   }
 
   void reset() noexcept {
     if (has_value()) {
-      operator_(any_internal::Ops::Destruct, storage_, nullptr);
+      operator_(any_internal::Ops::Destruct, &storage_, nullptr);
       operator_ = nullptr;
     }
   }
@@ -212,7 +215,7 @@ public:
   const std::type_info& type() const noexcept {
     if (has_value()) {
       any_internal::Args args;
-      operator_(any_internal::Ops::GetTypeInfo, nullptr, &args);
+      operator_(any_internal::Ops::GetTypeInfo, &storage_, &args);
       return *args.typeinfo;
     }
     return typeid(void);
@@ -221,7 +224,7 @@ public:
 
 private:
   template <typename>
-  friend void* any_internal::any_cast_helper(const any*);
+  friend void* any_internal::any_cast_helper(const any*) noexcept;
   using operator_fn =
       void (*)(any_internal::Ops, const any_internal::Storage*, any_internal::Args*);
   operator_fn operator_;
@@ -269,7 +272,7 @@ Tp any_cast(any&& operand) {
 
 namespace any_internal {
 template <typename Tp>
-void* any_cast_helper(const any* any) {
+void* any_cast_helper(const any* any) noexcept {
   using Up = remove_cvref_t<Tp>;
   constexpr bool flag =
       !std::is_same<Up, typename std::decay<Up>::type>::value ||
@@ -291,16 +294,16 @@ void* any_cast_helper(const any* any) {
 } // namespace any_internal
 
 template <typename Tp>
-inline Tp* any_cast(any* operand) {
+inline Tp* any_cast(any* operand) noexcept {
   return operand
-      ? static_cast<Tp*>(any_internal::any_cast_helper(operand))
+      ? static_cast<Tp*>(any_internal::any_cast_helper<Tp>(operand))
       : nullptr;
 }
 
 template <typename Tp>
-inline const Tp* any_cast(const any* operand) {
+inline const Tp* any_cast(const any* operand) noexcept {
   return operand
-      ? static_cast<Tp*>(any_internal::any_cast_helper(operand))
+      ? static_cast<Tp*>(any_internal::any_cast_helper<Tp>(operand))
       : nullptr;
 }
 

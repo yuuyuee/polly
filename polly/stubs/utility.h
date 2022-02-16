@@ -19,24 +19,40 @@ POLLY_INLINE_CONSTEXPR(in_place_t, in_place,);
 using std::in_place_type;
 using std::in_place_type_t;
 #else // POLLY_HAVE_STD_ANY || POLLY_HAVE_STD_VARIANT
-template<typename T> struct in_place_type_t {
-  explicit in_place_type_t() = default;
+namespace utility_internal {
+template <typename Tp>
+struct in_place_type_tag {
+  explicit in_place_type_tag() = delete;
+  in_place_type_tag(const in_place_type_tag&) = delete;
+  in_place_type_tag& operator=(const in_place_type_tag&) = delete;
 };
+} // namespace utility_internal
 
-template<typename T>
-void in_place_type(in_place_type_t<T>) {}
+template<typename Tp>
+using in_place_type_t = void(*)(utility_internal::in_place_type_tag<Tp>);
+
+template<typename Tp>
+void in_place_type(utility_internal::in_place_type_tag<Tp>) {}
 #endif // POLLY_HAVE_STD_ANY || POLLY_HAVE_STD_VARIANT
 
 #ifdef POLLY_HAVE_STD_VARIANT
 using std::in_place_index;
 using std::in_place_index_t;
-#else
-template<size_t I> struct in_place_index_t {
-  explicit in_place_index_t() = default;
+#else // POLLY_HAVE_STD_VARIANT
+namespace utility_internal {
+template <size_t N>
+struct in_place_index_tag {
+  explicit in_place_index_tag() = delete;
+  in_place_index_tag(const in_place_index_tag&) = delete;
+  in_place_index_tag& operator=(const in_place_index_tag&) = delete;
 };
+} // namespace utility_internal
 
-template<size_t I>
-void in_place_index(in_place_index_t<I>) {}
+template<size_t N>
+using in_place_index_t = void (*)(utility_internal::in_place_index_tag<N>);
+
+template<size_t N>
+void in_place_index(utility_internal::in_place_index_tag<N>) {}
 #endif  // ABSL_USES_STD_VARIANT
 
 // Like as std::min but constant function.
