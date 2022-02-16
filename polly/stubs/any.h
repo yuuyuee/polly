@@ -21,8 +21,6 @@ using std::make_any;
 #include "stubs/internal/raw_logging.h"
 #endif
 #include "stubs/internal/type_id.h"
-#include "stubs/utility.h"
-#include "stubs/type_traits.h"
 
 namespace polly {
 // Exception thrown by the value-returning forms of any_cast on a type mismatch.
@@ -45,6 +43,11 @@ public:
 #endif
 }
 
+namespace any_internal {
+template <typename>
+void* any_cast_helper(const any*);
+} // namespace any_internal
+
 // The class any describes a type-safe container for single values of any type.
 // An object of class any stores an instance of any type that satisfies the
 // constructor requirements or is empty, and this is referred to as the state
@@ -53,7 +56,7 @@ public:
 // empty and if the contained objects are equivalent.
 class any {
 public:
-  // Constructs an empty object.
+  // Constructors & Destructor
   constexpr any() noexcept: operator_(nullptr) {}
 
 #define POLLY_ANY_REQ_CTOR(Tp, args)  \
@@ -67,13 +70,13 @@ public:
             typename VTp = typename std::decay<Tp>::type,
             POLLY_ANY_REQ_CTOR(VTp, Args...)>
   explicit any(in_place_type_t<Tp>, Args&&... args)
-      : operator_(&any_internal::Operator<VTp>::Operator) {
-    any_internal::Construct(storage_, std::forward<Args>(args)...);
+      : operator_(any_internal::Operator<VTp>::Operator) {
+    any_internal::Construct(&storage_, std::forward<Args>(args)...);
   }
 
-#define POLLY_ANY_REQ_CTOR2(Tp, Il, args)  \
-  Requires<                           \
-      std::is_copy_constructible<Tp>, \
+#define POLLY_ANY_REQ_CTOR2(Tp, Il, args) \
+  Requires<                               \
+      std::is_copy_constructible<Tp>,     \
       std::is_constructible<Tp, Il, args> \
   > = true
 
@@ -83,8 +86,8 @@ public:
             typename VTp = typename std::decay<Tp>::type,
             POLLY_ANY_REQ_CTOR2(VTp, std::initializer_list<Up>, Args...)>
   explicit any(in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args)
-      : operator_(&any_internal::Operator<VTp>::Operator) {
-    any_internal::Construct(storage_, il, std::forward<Args>(args)...);
+      : operator_(any_internal::Operator<VTp>::Operator) {
+    any_internal::Construct(&storage_, il, std::forward<Args>(args)...);
   }
 
 #define POLLY_ANY_REQ_COPY_CTOR(Tp)                 \
@@ -97,8 +100,8 @@ public:
   template <typename Tp,
             typename VTp = typename std::decay<Tp>::type,
             POLLY_ANY_REQ_TYPE_CHECK(VTp)>
-  any(Tp&& value): operator_(&any_internal::Operators<VTp>::Operator) {
-    any_internal::Operators<VTp>::Construct(storage_, std::forward<Tp>(value));
+  any(Tp&& value): operator_(any_internal::Operators<VTp>::Operator) {
+    any_internal::Operators<VTp>::Construct(&storage_, std::forward<Tp>(value));
   }
 
   ~any() { reset(); }
@@ -129,22 +132,24 @@ public:
     }
   }
 
+  // Assignment operators
+
   any& operator=(const any& rhs) {
     *this = any(rhs);
     return *this;
   }
 
   any& operator=(any&& rhs) noexcept {
-    if (rhs.has_value()) {
+    if (&rhs != this) {
       reset();
-      Args args;
-      args.storage = &storage_;
-      rhs.operator_(any_internal::Ops::Move, &rhs.storage_, &args);
-      operator_ = rhs.operator_;
-      rhs.operator_ = nullptr;
-    } else {
-      reset();
+      if (rhs.has_value()) {
+        any_internal::Args args;
+        args.storage = &storage_;
+        rhs.operator_(any_internal::Ops::Move, &rhs.storage_, &args);
+        operator_ = rhs.operator_;
+        rhs.operator_ = nullptr;
     }
+
     return *this;
   }
 
@@ -155,11 +160,33 @@ public:
   }
 
   // Modifiers
-  template <typename Tp, typename... Args>
-  typename std::decay<Tp>::type emplace(Args&&... args);
 
-  template <typename Tp, typename Up, typename... Args>
-  typename std::decay<Tp>::type emplace(std::initializer_list<Up> il, Args&&... args);
+  template <typename Tp,
+            typename... Args,
+            typename VTp = typename std::decay<Tp>::type,
+            POLLY_ANY_REQ_CTOR(VTp, Args...)>
+  VTp& emplace(Args&&... args) {
+    reset();
+    any_internal::Operators<VTp>::Construct(&storage_, std::forward<Args>(args)...);
+    operator_ = any_internal::Operator<VTp>::Operator;
+    any_internal::Args args;
+    operator_(any_internal::Ops::Get, &storage_, &args);
+    return *static_cast<VTp*>(args.obj);
+  }
+
+  template <typename Tp,
+            typename Up,
+            typename... Args,
+            typename VTp = typename std::decay<Tp>::type,
+            POLLY_ANY_REQ_CTOR2(VTp, std::initializer_list<Up>, Args...)>
+  VTp& emplace(std::initializer_list<Up> il, Args&&... args) {
+    reset();
+    any_internal::Operators<VTp>::Construct(&storage_, il, std::forward<Args>(args)...);
+    operator_ = any_internal::Operator<VTp>::Operator;
+    any_internal::Args args;
+    operator_(any_internal::Ops::Get, &storage_, &args);
+    return *static_cast<VTp*>(args.obj);
+  }
 
   void reset() noexcept {
     if (has_value()) {
@@ -168,7 +195,13 @@ public:
     }
   }
 
-  void swap(any& other) noexcept;
+  void swap(any& other) noexcept {
+    if (this == &other || (!has_value() && !other.has_value()))
+      return;
+    any tmp = std::move(*this);
+    *this = std::move(other);
+    other = std::move(tmp);
+  }
 
   // Observers
   bool has_value() const noexcept {
@@ -178,7 +211,7 @@ public:
 #ifdef POLLY_HAVE_RTTI
   const std::type_info& type() const noexcept {
     if (has_value()) {
-      Args args;
+      any_internal::Args args;
       operator_(any_internal::Ops::GetTypeInfo, nullptr, &args);
       return *args.typeinfo;
     }
@@ -187,6 +220,8 @@ public:
 #endif
 
 private:
+  template <typename>
+  friend void* any_internal::any_cast_helper(const any*);
   using operator_fn =
       void (*)(any_internal::Ops, const any_internal::Storage*, any_internal::Args*);
   operator_fn operator_;
@@ -195,28 +230,89 @@ private:
 
 // Overloads the std::swap algorithm for any.
 // Swaps the content of two any objects by calling lhs.swap(rhs)
-void swap(any&, any&) noexcept;
+inline void swap(any& lhs, any& rhs) noexcept {
+  lhs.swap(rhs);
+}
 
 template <typename Tp>
-Tp any_cast(const any& operand);
+Tp any_cast(const any& operand) {
+  using Up = remove_cvref_t<Tp>;
+  static_assert(std::is_constructible<Tp, const Up&>::value,
+      "Template argument must be constructible from a const value.");
+  auto res = any_cast<Up>(&operand);
+  if (res)
+    return static_cast<Tp>(*res);
+  ThrowBadAnyCast();
+}
 
 template <typename Tp>
-Tp any_cast(any& operand);
+Tp any_cast(any& operand) {
+  using Up = remove_cvref_t<Tp>;
+  static_assert(std::is_constructible<Tp, Up&>::value,
+      "Template argument must be constructible from an lvalue.");
+  auto res = any_cast<Up>(&operand);
+  if (res)
+    return static_cast<Tp>(*res);
+  ThrowBadAnyCast();
+}
 
 template <typename Tp>
-Tp any_cast(any&& operand);
+Tp any_cast(any&& operand) {
+  using Up = remove_cvref_t<Tp>;
+  static_assert(std::is_constructible<Tp, Up>::value,
+      "Template argument must be constructible from an rvalue.");
+  auto res = any_cast<Up>(&operand);
+  if (res)
+    return static_cast<Tp>(std::move(*res));
+  ThrowBadAnyCast();
+}
+
+namespace any_internal {
+template <typename Tp>
+void* any_cast_helper(const any* any) {
+  using Up = remove_cvref_t<Tp>;
+  constexpr bool flag =
+      !std::is_same<Up, typename std::decay<Up>::type>::value ||
+      !std::is_copy_constructible<Up>::value;
+  if (flag)
+    return nullptr;
+
+  if (any->operator_ != any_internal::Operators<Up>::Operator)
+    return nullptr;
+
+#ifdef POLLY_HAVE_RTTI
+  if (any->type() != typeid(Tp))
+    return nullptr;
+#endif
+  any_internal::Args args;
+  any->operator_(any_internal::Ops::Get, &any->storage_, &args);
+  return args.obj;
+}
+} // namespace any_internal
 
 template <typename Tp>
-Tp* any_cast(any* operand);
+inline Tp* any_cast(any* operand) {
+  return operand
+      ? static_cast<Tp*>(any_internal::any_cast_helper(operand))
+      : nullptr;
+}
 
 template <typename Tp>
-const Tp* any_cast(const any* operand);
+inline const Tp* any_cast(const any* operand) {
+  return operand
+      ? static_cast<Tp*>(any_internal::any_cast_helper(operand))
+      : nullptr;
+}
 
 template <typename Tp, typename... Args>
-any make_any(Args&&... args);
+any make_any(Args&&... args) {
+  return any(in_place_type<Tp>, std::forward<Args>(args)...);
+}
 
 template <typename Tp, typename Up, typename... Args>
-any make_any(std::initializer_list<Up> il, Args&&... args);
+any make_any(std::initializer_list<Up> il, Args&&... args) {
+  return any(in_place_type<Tp>, il, std::forward<Args>(args)...);
+}
 
 } // namespace polly
 

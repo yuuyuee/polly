@@ -31,7 +31,7 @@ struct is_small_obj
         std::is_nothrow_move_constructible<Tp>::value> {};
 
 struct Args {
-  void* ptr;
+  void* obj;
   const std::type_info* typeinfo;
   Storage* storage;
 };
@@ -45,20 +45,20 @@ template <typename Tp, bool = is_small_obj<Tp>::value>
 struct Operators {
   // Constructors and destructor
   template <typename VTp>
-  static void Construct(Storage& storage, VTp&& value) {
-    storage.ptr = new Tp(std::forward<VTp>(value));
+  static void Construct(Storage* storage, VTp&& value) {
+    storage->ptr = new Tp(std::forward<VTp>(value));
   }
 
   template <typename... Args>
-  static void Construct(Storage& storage, Args&&... args) {
-    storage.ptr = new Tp(std::forward<Args>(args)...);
+  static void Construct(Storage* storage, Args&&... args) {
+    storage->ptr = new Tp(std::forward<Args>(args)...);
   }
 
   static void Operator(Ops ops, const Storage* self, Args* args) {
     auto ptr = reinterpret_cast<const Tp*>(self->ptr);
     switch (ops) {
     case Ops::Get:
-      args->ptr = const_cast<Tp*>(ptr);
+      args->obj = const_cast<Tp*>(ptr);
       break;
     case Ops::GetTypeInfo:
 #ifdef POLLY_HAVE_RTTI
@@ -82,20 +82,20 @@ struct Operators {
 template <typename Tp>
 struct Operators<Tp, true> {
   template <typename VTp>
-  static void Construct(Storage& storage, VTp&& value) {
-    ::new(storage.buffer) Tp(std::forward<VTp>(value));
+  static void Construct(Storage* storage, VTp&& value) {
+    ::new(storage->buffer) Tp(std::forward<VTp>(value));
   }
 
   template <typename... Args>
-  static void Construct(Storage& storage, Args&&... args) {
-    ::new(storage.buffer) Tp(std::forward<Args>(args)...);
+  static void Construct(Storage* storage, Args&&... args) {
+    ::new(storage->buffer) Tp(std::forward<Args>(args)...);
   }
 
   static void Operator(Ops ops, const Storage* self, Args* args) {
     auto ptr = reinterpret_cast<const Tp*>(self->buffer);
     switch (ops) {
     case Get:
-      args->ptr = const_cast<Tp*>(ptr);
+      args->obj = const_cast<Tp*>(ptr);
       break;
     case Ops::GetTypeInfo:
 #ifdef POLLY_HAVE_RTTI
