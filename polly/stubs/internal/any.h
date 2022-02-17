@@ -2,9 +2,7 @@
 
 #include "stubs/internal/config.h"
 
-#if defined(POLLY_HAVE_RTTI)
 #include <typeinfo>
-#endif
 #include "stubs/type_traits.h"
 #include "stubs/utility.h"
 

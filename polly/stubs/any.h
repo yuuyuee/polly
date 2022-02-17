@@ -24,15 +24,9 @@ using std::make_any;
 
 namespace polly {
 // Exception thrown by the value-returning forms of any_cast on a type mismatch.
-class bad_any_cast
-#ifdef POLLY_HAVE_RTTI
-    : public std::bad_cast
-#else
-    : public std::exception
-#endif //POLLY_HAVE_RTTI
-{
+class bad_any_cast: public std::bad_cast {
 public:
-  bad_any_cast() noexcept {}
+  bad_any_cast() noexcept = default;
   virtual ~bad_any_cast() noexcept = default;
 
   virtual const char* what() const noexcept override {

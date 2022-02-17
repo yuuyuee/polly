@@ -42,7 +42,7 @@ polly_stubs_test_SRC =                          \
 		third_party/gtest/gmock-gtest-all.cc
 
 
-CXXFLAGS ?= -std=c++11 -Wall -Wextra -Werror -g -O2 -Ipolly -Ithird_party/gtest #-fno-exceptions -fno-rtti
+CXXFLAGS ?= -std=c++11 -Wall -Wextra -Werror -g -O2 -Ipolly -Ithird_party/gtest -fno-exceptions -fno-rtti
 LDFLAGS ?=
 LDADD ?= -lpthread
 

@@ -29,7 +29,7 @@ namespace polly {
 // object that does not contain a value.
 class bad_optional_access : public std::exception {
  public:
-  bad_optional_access() noexcept {}
+  bad_optional_access() noexcept = default;
   virtual ~bad_optional_access() noexcept = default;
 
   virtual const char* what() const noexcept override {
