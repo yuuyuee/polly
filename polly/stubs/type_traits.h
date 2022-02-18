@@ -44,11 +44,14 @@ struct negation: public std::integral_constant<bool, !Tp::value> {};
 template <typename... Tn>
 using Requires = typename std::enable_if<conjunction<Tn...>::value, bool>::type;
 
-template<typename Tp>
+template <typename Tp>
 using remove_cvref = std::remove_cv<typename std::remove_reference<Tp>::type>;
 
-template<typename Tp>
+template <typename Tp>
 using remove_cvref_t = typename remove_cvref<Tp>::type;
+
+template <typename Tp>
+using add_pointer_t = typename std::add_pointer<Tp>::type;
 
 namespace type_traits_internal {
 template <typename Tp>

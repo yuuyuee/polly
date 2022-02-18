@@ -25,6 +25,7 @@ using std::visit;
 #include <functional>
 #include <new>
 #include <exception>
+#include <initializer_list>
 
 #include "stubs/macros.h"
 #include "stubs/type_traits.h"
@@ -182,63 +183,159 @@ constexpr bool holds_alternative(const variant<Types...>& v) noexcept {
 // being specified is different from the index of the alternative that currently
 // stored, throws `bad_variant_access`.
 template <std::size_t I, typename... Types>
-constexpr variant_alternative_t<I, variant<Types...>> const&
-get(const variant<Types...>& v) {
+constexpr variant_alternative_t<I, variant<Types...>>& get(
+    variant<Types...>& v) {
 
 }
 
 template <std::size_t I, typename... Types>
-constexpr variant_alternative_t<I, variant<Types...>>&
-get(variant<Types...>& v) {
+constexpr variant_alternative_t<I, const variant<Types...>>& get(
+    const variant<Types...>& v) {
 
 }
 
 template <std::size_t I, typename... Types>
-constexpr variant_alternative_t<I, variant<Types...>>&&
-get(const variant<Types...>&& v) {
+constexpr variant_alternative_t<I, variant<Types...>>&& get(
+    const variant<Types...>&& v) {
 
 }
 
 template <std::size_t I, typename... Types>
-constexpr variant_alternative_t<I, variant<Types...>> const &&
-get(const variant<const Types...>&& v) {
+constexpr variant_alternative_t<I, const variant<Types...>>&& get(
+    const variant<Types...>&& v) {
 
 }
-
-namespace variant_internal {
-
-} // namespace variant_internal
 
 template <typename Tp, typename... Types>
 constexpr Tp const& get(const variant<Types...>& v) {
-
+  if (POLLY_EXPECT_TRUE(holds_alternative<Tp>(v))) {
+    return get<variant_internal::index_of<Tp, variant<Types...>>::value>(v);
+  }
+  ThrowBadVariantAccess();
 }
 
 template <typename Tp, typename... Types>
 constexpr Tp& get(variant<Types...>& v) {
-
+  if (POLLY_EXPECT_TRUE(holds_alternative<Tp>(v))) {
+    return get<variant_internal::index_of<Tp, variant<Types...>>::value>(v);
+  }
+  ThrowBadVariantAccess();
 }
 
 template <typename Tp, typename... Types>
 constexpr Tp&& get(const variant<Types...>&& v) {
-
+  if (POLLY_EXPECT_TRUE(holds_alternative<Tp>(v))) {
+    return get<variant_internal::index_of<Tp, variant<Types...>>::value>(std::move(v));
+  }
+  ThrowBadVariantAccess();
 }
 
 template <typename Tp, typename... Types>
 constexpr Tp const&& get(const variant<const Types...>&& v) {
+  if (POLLY_EXPECT_TRUE(holds_alternative<Tp>(v))) {
+    return get<variant_internal::index_of<Tp, variant<Types...>>::value>(std::move(v));
+  }
+  ThrowBadVariantAccess();
+}
+
+// get_if
+// Obtains a pointer to the value of a pointed to variant given the index or
+// the type, return null on error.
+template <typename std::size_t I, typename... Types>
+constexpr add_pointer_t<variant_alternative_t<I, variant<Types...>>>
+    get_if(variant<Types...>* p) noexcept {
 
 }
 
+template <typename std::size_t I, typename... Types>
+constexpr add_pointer_t<variant_alternative_t<I, const variant<Types...>>>
+    get_if(const variant<Types...>* p) noexcept {
 
+}
 
-// get_if
+template <typename Tp, typename... Types>
+constexpr add_pointer_t<Tp> get_if(variant<Types...>* p) noexcept {
+  return get_if<variant_internal::index_of<Tp, variant<Types...>>::value>(p);
+}
+
+template <typename Tp, typename... Types>
+constexpr add_pointer_t<const Tp> get_if(const variant<Types...>* p) noexcept {
+  return get_if<variant_internal::index_of<Tp, variant<Types...>>::value>(p);
+}
 
 // compares operator
+template <typename... Types>
+constexpr bool operator==(const variant<Types...>& v, const variant<Types...>& w);
+
+template <typename... Types>
+constexpr bool operator!=(const variant<Types...>& v, const variant<Types...>& w);
+
+template <typename... Types>
+constexpr bool operator<(const variant<Types...>& v, const variant<Types...>& w);
+
+template <typename... Types>
+constexpr bool operator>(const variant<Types...>& v, const variant<Types...>& w);
+
+template <typename... Types>
+constexpr bool operator<=(const variant<Types...>& v, const variant<Types...>& w);
+
+template <typename... Types>
+constexpr bool operator>=(const variant<Types...>& v, const variant<Types...>& w);
 
 // swap
+template <typename... Types>
+void swap(variant<Types...>& lhs, variant<Types...>& rhs) noexcept {
+
+}
 
 // variant
+template <typename... Types>
+class variant {
+public:
+  constexpr variant() noexcept;
+  constexpr variant(const variant& other);
+  constexpr variant(variant&& other) noexcept;
 
+  template <typename Tp>
+  constexpr variant(T&& v) noexcept;
+
+  template <typename Tp, typename... args>
+  constexpr explicit variant(in_place_type_t<Tp>, Args&&... args);
+
+  template <typename Tp, typename Up, typename... args>
+  constexpr explicit variant(in_place_type_t<Tp>, std::initializer_list<Up> il, &&... args);
+
+  template <std::size_t I, typename... Args>
+  constexpr explicit variant(in_place_type_t<Tp>, Args&&... args);
+
+  template <std::size_t I, typename Up, typename... Args>
+  constexpr explicit variant(in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args);
+
+  ~variant();
+
+  // Observers
+  constexpr std::size_t index() const noexcept;
+
+  constexpr bool valueless_by_exception() const noexcept;
+
+  // Modifiers
+  template <typename Tp, typename... Args>
+  Tp& emplace(Args&&... args);
+
+  template <typename Tp, typename Up, typename... Args>
+  Tp& emplace(std::initializer_list<Up> il, &&... args);
+
+  template <std::size_t I, typename... Args>
+  variant_alternative_t<I, variant<Args...>>& emplace(Args&&... args);
+
+  template <std::size_t I, typename Up, typename... Args>
+  variant_alternative_t<I, variant<Args...>>& emplace(
+      std::initializer_list<Up> il, Args&&... args);
+
+  void swap(variant& rhs) noexcept;
+
+private:
+};
 
 
 
