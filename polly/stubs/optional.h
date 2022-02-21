@@ -76,7 +76,7 @@ POLLY_INLINE_CONSTEXPR(nullopt_t, nullopt, nullopt_t::construct_tag{});
 template <typename Tp>
 class optional
     : private optional_internal::optional_base<Tp>,
-      private optional_internal::enable_copy_move<Tp, optional<Tp>> {
+      private optional_internal::optional_enable_copy_move<Tp, optional<Tp>> {
 private:
   static_assert(!std::is_same<nullopt_t, typename std::remove_cv<Tp>::type>::value,
       "optional<nullopt_t> is not allowed.");

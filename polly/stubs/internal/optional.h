@@ -1,10 +1,13 @@
 #pragma once
 
+#include "stubs/internal/config.h"
+
 #include <functional>
 #include <initializer_list>
 
 #include "stubs/type_traits.h"
 #include "stubs/utility.h"
+#include "stubs/internal/enable_special_members.h"
 
 namespace polly {
 template <typename Tp>
@@ -393,176 +396,37 @@ public:
 };
 
 template <typename Tp, typename Up>
-using converts_from_optional = std::integral_constant<
-  bool,
-  std::is_constructible<Tp, const optional<Up>&>::value  ||
-  std::is_constructible<Tp, optional<Up>&>::value        ||
-  std::is_constructible<Tp, const optional<Up>&&>::value ||
-  std::is_constructible<Tp, optional<Up>&&>::value       ||
-  std::is_convertible<const optional<Up>&, Tp>::value    ||
-  std::is_convertible<optional<Up>&, Tp>::value          ||
-  std::is_convertible<const optional<Up>&&, Tp>::value   ||
-  std::is_convertible<optional<Up>&&, Tp>::value
->;
+using converts_from_optional =
+    std::integral_constant<
+        bool,
+        std::is_constructible<Tp, const optional<Up>&>::value  ||
+        std::is_constructible<Tp, optional<Up>&>::value        ||
+        std::is_constructible<Tp, const optional<Up>&&>::value ||
+        std::is_constructible<Tp, optional<Up>&&>::value       ||
+        std::is_convertible<const optional<Up>&, Tp>::value    ||
+        std::is_convertible<optional<Up>&, Tp>::value          ||
+        std::is_convertible<const optional<Up>&&, Tp>::value   ||
+        std::is_convertible<optional<Up>&&, Tp>::value>;
 
 template <typename Tp, typename Up>
-using assigns_from_optional = std::integral_constant<
-  bool,
-  std::is_assignable<Tp&, const optional<Up>&>::value    ||
-  std::is_assignable<Tp&, optional<Up>&>::value          ||
-  std::is_assignable<Tp&, const optional<Up>&&>::value   ||
-  std::is_assignable<Tp&, optional<Up>&&>::value
->;
+using assigns_from_optional =
+    std::integral_constant<
+        bool,
+        std::is_assignable<Tp&, const optional<Up>&>::value    ||
+        std::is_assignable<Tp&, optional<Up>&>::value          ||
+        std::is_assignable<Tp&, const optional<Up>&&>::value   ||
+        std::is_assignable<Tp&, optional<Up>&&>::value>;
 
-template <
-    bool Copy, bool CopyAssignment,
-    bool Move, bool MoveAssignment,
-    typename Tag = void>
-struct enable_copy_move_base {};
-
-template <typename Tag>
-struct enable_copy_move_base<false, true, true, true, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = delete;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = default;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = default;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = default;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<true, false, true, true, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = default;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = default;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = delete;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = default;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<false, false, true, true, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = delete;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = default;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = delete;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = default;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<true, true, false, true, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = default;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = delete;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = default;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = default;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<false, true, false, true, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = delete;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = delete;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = default;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = default;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<true, false, false, true, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = default;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = delete;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = delete;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = default;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<false, false, false, true, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = delete;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = delete;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = delete;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = default;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<true, true, true, false, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = default;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = default;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = default;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = delete;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<false, true, true, false, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = delete;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = default;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = default;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = delete;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<true, false, true, false, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = default;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = default;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = delete;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = delete;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<false, false, true, false, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = delete;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = default;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = delete;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = delete;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<true, true, false, false, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = default;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = delete;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = default;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = delete;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<false, true, false, false, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = delete;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = delete;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = default;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = delete;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<true, false, false, false, Tag> {
-  constexpr enable_copy_move_base() noexcept                              = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = default;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = delete;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = delete;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = delete;
-};
-
-template <typename Tag>
-struct enable_copy_move_base<false, false, false, false, Tag> {
-  constexpr enable_copy_move_base() noexcept                         = default;
-  constexpr enable_copy_move_base(const enable_copy_move_base&) noexcept  = delete;
-  constexpr enable_copy_move_base(enable_copy_move_base&&) noexcept       = delete;
-  enable_copy_move_base& operator=(const enable_copy_move_base&) noexcept = delete;
-  enable_copy_move_base& operator=(enable_copy_move_base&&) noexcept      = delete;
-};
-
-template <typename Tp, typename Tag>
-using enable_copy_move = struct enable_copy_move_base<
-    std::is_copy_constructible<Tp>::value,
-    std::is_copy_constructible<Tp>::value && std::is_copy_assignable<Tp>::value,
-    std::is_move_constructible<Tp>::value,
-    std::is_move_constructible<Tp>::value && std::is_move_assignable<Tp>::value,
-    Tag
->;
+template <typename Tp, typename Tag = void>
+using optional_enable_copy_move =
+    enable_copy_move<
+        std::is_copy_constructible<Tp>::value,
+        std::is_copy_constructible<Tp>::value &&
+        std::is_copy_assignable<Tp>::value,
+        std::is_move_constructible<Tp>::value,
+        std::is_move_constructible<Tp>::value &&
+        std::is_move_assignable<Tp>::value,
+        Tag>;
 
 // Helper function for checking whether an expression is convertible to bool.
 bool convertible_to_bool(bool);

@@ -30,13 +30,11 @@ using std::visit;
 #include "stubs/macros.h"
 #include "stubs/type_traits.h"
 #include "stubs/utility.h"
+#include "stubs/internal/enable_special_members.h"
 
 namespace polly {
 template <typename...>
 class variant;
-
-// Helper objects
-POLLY_INLINE_CONSTEXPR(size_t, variant_npos, static_cast<size_t>(-1));
 
 // Helper classes
 
@@ -290,7 +288,17 @@ void swap(variant<Types...>& lhs, variant<Types...>& rhs) noexcept {
 
 // variant
 template <typename... Types>
-class variant {
+class variant
+    : private variant_internal::VariantBase<Types...>,
+      private enable_default_constructor<
+          variant_internal::Traits<Types...>::is_default_ctor::value,
+          variant<Types...>>,
+      private enable_copy_move<
+          ariant_internal::Traits<Types...>::is_copy_ctor::value,
+          ariant_internal::Traits<Types...>::is_copy_assign::value,
+          ariant_internal::Traits<Types...>::is_move_ctor::value,
+          ariant_internal::Traits<Types...>::is_move_assign::value,
+          variant<Types...>> {
 public:
   constexpr variant() noexcept;
   constexpr variant(const variant& other);

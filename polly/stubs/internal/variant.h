@@ -9,11 +9,10 @@ namespace polly {
 template <typename...>
 class variant;
 
-namespace variant_internal {
-struct enable_default_constructors_tag {
-  explicit constexpr enable_default_constructors_tag() = default;
-};
+// Helper objects
+POLLY_INLINE_CONSTEXPR(size_t, variant_npos, static_cast<size_t>(-1));
 
+namespace variant_internal {
 template <std::size_t N, typename... Types>
 struct nth_type;
 
@@ -29,9 +28,7 @@ template <typename... Types>
 struct Traits {
   struct is_default_ctor {
     static constexpr bool value =
-        std::is_default_constructible<
-            typename nth_type<0, Types...>::type
-        >::value;
+        std::is_default_constructible<typename nth_type<0, Types...>::type>::value;
   };
 
   struct is_copy_ctor {
@@ -114,58 +111,210 @@ struct Traits {
 
 
 
-template <typename Tp, bool = std::is_trivially_destructible<Tp>::value>
-struct Uninitialized {
-  template <typename... Args>
-  constexpr Uninitialized(in_place_index_t<0>, Args&&... args) {
-    ::new (reinterpret_cast<void*>(std::addressof(value)))
-        Tp(std::forward<Args>(args)...);
-  }
-
-  Tp& get() & noexcept {
-    return value;
-  }
-
-  const Tp& get() const& noexcept {
-    return value;
-  }
-
-  Tp&& get() && noexcept {
-    return std::move(value);
-  }
-
-  const Tp&& get() const&& noexcept {
-    return std::move(value);
-  }
-
-
-  Tp value;
-}
-
-template <typename Tp>
-struct Uninitialized<Tp, true> {
-
-};
-
-
 
 template <typename... Types>
-union VariantUnion {};
+union Union {};
 
 template <typename First, typename... Last>
-union VariantUnion<First, Last...> {
-  constexpr VariantUnion()
+union Union<First, Last...> {
+  using union_type = Union<Last...>;
+
+  constexpr Union(): last() {}
+
+  template<typename... Args>
+  constexpr explicit Union(in_place_index_t<0>, Args&&... args)
+      : first(std::forward<Args>(args)...) {}
+
+  template<std::size_t I, typename... Args>
+  constexpr explicit Union(in_place_index_t<I>, Args&&... args)
+      : last(in_place_index_t<I - 1>, std::forward<Args>(args)...) {}
+
+  First first;
+  union_type last;
 };
-
-
-
 
 template <typename... Types>
-struct VariantBase: MoveAssignBase<Types...> {
-  using Base = MoveAssignBase<Types...>;
+union UnionDestructible {};
+
+template <typename First, typename... Last>
+union UnionDestructible<First, Last...> {
+  using union_type = UnionDestructible<Last...>;
+
+  constexpr Union(): last() {}
+
+  template<typename... Args>
+  constexpr explicit Union(in_place_index_t<0>, Args&&... args)
+      : first(std::forward<Args>(args)...) {}
+
+  template<std::size_t I, typename... Args>
+  constexpr explicit Union(in_place_index_t<I>, Args&&... args)
+      : last(in_place_index_t<I - 1>, std::forward<Args>(args)...) {}
+
+  ~UnionDestructible() {}
+
+  First first;
+  union_type last;
 };
 
-} // namespace variant_internal
+template <typename... Types>
+using VariantUnion =
+    std::conditional<
+        std::is_trivially_destructible<Union<Types...>::value,
+        Union<Types...>, UnionDestructible<Types...>>;
 
+template <bool /* trivial dtor */, typename... Types>
+struct VariantStorage;
+
+template <typename... Types>
+struct VariantStorage<false, Types...> {
+  constexpr VariantStorage(): index(variant_npos) {}
+
+  template <std::size_t I, typename... Args>
+  constexpr explicit VariantStorage(in_place_index_t<I>, Args&&... args)
+      : state(in_place_index_t<I>, std::forward<Args>(args)...), index(I) {}
+
+  ~VariantStorage() {}
+
+  VariantUnion<Types...> state;
+  std::size_t index;
+};
+
+template <typename... Types>
+struct VariantStorage<true, Types...> {
+  constexpr VariantStorage(): index(variant_npos) {}
+
+  template <std::size_t I, typename... Args>
+  constexpr explicit VariantStorage(in_place_index_t<I>, Args&&... args)
+      : state(in_place_index_t<I>, std::forward<Args>(args)...), index(I) {}
+
+  VariantUnion<Types...> state;
+  std::size_t index;
+};
+
+template <typename... Types>
+using VariantStorageType =
+    VariantStorage<Traits<Types...>::is_trivial_dtor::value, Types...>;
+
+template <bool /* trivial copy ctor */, typename... Types>
+struct CopyConstructorBase: public VariantStorageType<Types...> {
+  using Base = VariantStorageType<Types...>;
+  using Base::Base;
+
+  CopyConstructorBase(const CopyConstructorBase& other)
+      noexcept(Traits<Types...>::is_nothrow_copy_ctor::value) {
+    // TODO:
+  }
+  CopyConstructorBase(CopyConstructorBase&&) = default;
+  CopyConstructorBase& operator=(const CopyConstructorBase&) = default;
+  CopyConstructorBase& operator=(CopyConstructorBase&&) = default;
+};
+
+template <typename... Types>
+struct CopyConstructorBase<true, Types...>: public  VariantStorageType<Types...> {
+  using Base = VariantStorageType<Types...>;
+  using Base::Base;
+};
+
+template <typename... Types>
+using CopyConstructorBaseType =
+    CopyConstructorBase<Traits<Types...>::is_trivial_copy_ctor::value, Types...>;
+
+template <bool /* trivial move ctor */, typename... Types>
+struct MoveConstructorBase: public CopyConstructorBaseType<Types...> {
+  using Base = CopyConstructorBaseType<Types...>;
+  using Base::Base;
+
+  MoveConstructorBase(MoveConstructorBase&& other)
+      noexcept(Traits<Types...>::is_nothrow_move_ctor::value) {
+    // TODO:
+  }
+
+  // TODO: desttructive_move, destructive_copy
+
+  MoveConstructorBase(const MoveConstructorBase&) = default;
+  MoveConstructorBase& operator=(const MoveConstructorBase&) = default;
+  MoveConstructorBase& operator=(MoveConstructorBase&&) = default;
+};
+
+template <typename... Types>
+struct MoveConstructorBase<true, Types...>: public CopyConstructorBaseType<Types...> {
+  using Base = CopyConstructorBaseType<Types...>;
+  using Base::Base;
+
+  // TODO: desttructive_move, destructive_copy
+};
+
+template <typename... Types>
+using MoveConstructorBaseType =
+    MoveConstructorBase<Traits<Types...>::is_trivial_move_ctor::value, Types...>;
+
+template <bool /* trivial copy assign */, typename... Types>
+struct CopyAssignBase: public MoveConstructorBaseType<Types...> {
+  using Base = MoveConstructorBaseType<Types...>;
+  using Base::Base;
+
+  CopyAssignBase& operator=(const CopyAssignBase& other)
+      noexcept(Traits<Types...>::is_nothrow_copy_assign::value) {
+    // TODO:
+  }
+
+  CopyAssignBase(const CopyAssignBase&) = default;
+  CopyAssignBase(CopyAssignBase&&) = default;
+  CopyAssignBase& operator=(CopyAssignBase&&) = default;
+};
+
+template <typename... Types>
+struct CopyAssignBase<true, Types...>: public MoveConstructorBaseType<Types...> {
+  using Base = MoveConstructorBaseType<Types...>;
+  using Base::Base;
+};
+
+template <typename... Types>
+using CopyAssignBaseType =
+    CopyAssignBase<Traits<Types...>::is_trivial_copy_assign::value, Types...>;
+
+template <bool /* trivial move assign */, typename... Types>
+struct MoveAssignBase: public CopyAssignBaseType<Types...> {
+  using Base = CopyAssignBaseType<Types...>;
+  using Base::Base;
+
+  MoveAssignBase& operator=(MoveAssignBase&& other)
+      noexcept(Traits<Types...>::is_nothrow_move_assign::value) {
+    // TODO
+  }
+
+  MoveAssignBase(const MoveAssignBase&) = default;
+  MoveAssignBase(MoveAssignBase&&) = default;
+  MoveAssignBase& operator=(const MoveAssignBase&) = default;
+};
+
+template <typename... Types>
+struct MoveAssignBase: public CopyAssignBaseType<Types...> {
+  using Base = CopyAssignBaseType<Types...>;
+  using Base::Base;
+};
+
+template <typename... Types>
+using MoveAssignBaseType =
+    MoveAssignBase<Traits<Types...>::is_trivial_move_assign::value, Types...>;
+
+template <typename... Types>
+struct VariantBase: public MoveAssignBaseType<Tyeps...> {
+  using Base = MoveAssignBaseType<Tyeps...>;
+
+  constexpr VariantBase()
+      noexcept(Traits<Types...>::is_nothrow_default_ctor)
+      : VariantBase(in_place_index<0>) {}
+
+  template <std::size_t I, typename... Args>
+  constexpr explicit VariantBase(in_place_index_t<I> i, Args&&... args)
+      : Base(i, std::forward<Args>(args)...) {}
+
+  VariantBase(const VariantBase&) = default;
+  VariantBase(VariantBase&&) = default;
+  VariantBase& operator=(const VariantBase&) = default;
+  VariantBase& operator=(VariantBase&&) = default;
+};
+} // namespace variant_internal
 
 } // namespace polly
