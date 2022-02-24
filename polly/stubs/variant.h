@@ -30,7 +30,6 @@ using std::visit;
 #include "stubs/macros.h"
 #include "stubs/type_traits.h"
 #include "stubs/utility.h"
-#include "stubs/internal/enable_special_members.h"
 
 namespace polly {
 template <typename...>
@@ -71,28 +70,6 @@ public:
   throw bad_variant_access{};
 #endif
 }
-
-// variant_size
-// Provides access to the number of alternatives in a possibly cv-qualified
-// variant as a compile-time constant expression.
-template <typename>
-struct variant_size;
-
-template <typename... Types>
-struct variant_size<variant<Types...>>
-    : public std::integral_constant<std::size_t, sizeof...(Types)> {};
-
-// Specialization for const qualified variant.
-template <typename Tp>
-struct variant_size<const Tp>: public variant_size<Tp>::value {};
-
-// Specialization for volatile qualified variant.
-template <typename Tp>
-struct variant_size<volatile Tp>: public variant_size<Tp>::value {};
-
-// Specialization for const volatile qualified variant.
-template <typename Tp>
-struct variant_size<const volatile Tp>: public variant_size<Tp>::value {};
 
 // variant_alternative
 // Provides compile-time indexed access to the types of the alternatives of the
@@ -139,39 +116,13 @@ struct variant_alternative<I, const volatile Tp> {
 // holds_alternative
 // Checks if the variant holds the alternative type. The call is ill-formed
 // if type does not appear exactly once in types.
-namespace variant_internal {
-template <typename Tp, typename Variant>
-struct type_in;
-
-template <typename Tp, typename Last>
-struct type_in<Tp, variant<Last>>
-    : public std::integral_constant<std::size_t, std::is_same<Tp, Last>::value> {};
-
-template <typename Tp, typename First, typename... Last>
-struct type_in<Tp, variant<First, Last...>>
-    : public std::integral_constant<
-        std::size_t,
-        type_in<Tp, First>::value + type_in<Tp, Last...>::value> {};
-
-template <typename Tp, typename Variant>
-struct index_of: public std::integral_constan<std::size_t, 0> {};
-
-template <typename Tp, typename First, typename... Last>
-struct index_of<Tp, variant<Tp, First, Last...>>
-    : public std::integral_constant<
-        std::size_t,
-        type_in<Tp, variant<First>>::value ? 0 : index_of<Tp, variant<Last...>>::value + 1
-      > {};
-
-} // namespace variant_internal
-
 template <typename Tp, typename... Types>
 constexpr bool holds_alternative(const variant<Types...>& v) noexcept {
   static_assert(
-    variant_internal::type_in<Tp, variant<Types...>>::value,
+    variant_internal::TypeCount<Tp, variant<Types...>>::value == 1,
     "Tp must appear exactly once in types."
   );
-  return v.index() == variant_internal::index_of<Tp, variant<Types...>>::value;
+  return v.index() == variant_internal::IndexOf<Tp, variant<Types...>>::value;
 }
 
 // get
@@ -290,36 +241,95 @@ void swap(variant<Types...>& lhs, variant<Types...>& rhs) noexcept {
 template <typename... Types>
 class variant
     : private variant_internal::VariantBase<Types...>,
-      private enable_default_constructor<
-          variant_internal::Traits<Types...>::is_default_ctor::value,
-          variant<Types...>>,
-      private enable_copy_move<
-          ariant_internal::Traits<Types...>::is_copy_ctor::value,
-          ariant_internal::Traits<Types...>::is_copy_assign::value,
-          ariant_internal::Traits<Types...>::is_move_ctor::value,
-          ariant_internal::Traits<Types...>::is_move_assign::value,
-          variant<Types...>> {
+      private variant_internal::VariantEnableDefaultConstructor<Types...>,
+      private variant_internal::VariantEnableCopyMove<Types...> {
+private:
+  static_assert(sizeof...(Types) > 0,
+  "variant must have at least on alternative");
+  static_assert(negation<conjunction<std::is_object<Types>...>>::value &&
+                negation<conjunction<negation<std::is_array<Types>>...>>::value,
+  "variant all types must be (posibily cv-qualified) non-array object types");
+
+  using Base = variant_internal::variant_base<Types...>;
+  using DefaultConstructor =
+      variant_internal::VariantEnableDefaultConstructor<Types...>;
+
 public:
-  constexpr variant() noexcept;
-  constexpr variant(const variant& other);
-  constexpr variant(variant&& other) noexcept;
+  constexpr variant() noexcept = default;
+  constexpr variant(const variant& other) = default;
+  constexpr variant(variant&& other) noexcept; = default;
+  variant& operator=(const variant&) = default;
+  variant& operator=(variant&&) = default;
+  ~variant() = default;
 
-  template <typename Tp>
-  constexpr variant(T&& v) noexcept;
+  // Converting constructor
+  // Constructs a variant of an alternative type specified by overload
+  // resolution of the provided forwarding arguments through
+  // direct-initialization.
+  template <typename Tp,
+      typename = enable_if_t<variant_internal::NotInPlaceTag<Tp>::value>,
+      typename = enable_if_t<variant_internal::NotSelf<Tp, variant>::value>,
+      std::size_t I = variant_internal::IndexOfCtorType<Tp, variant>::value,
+      typename Tj = variant_alternative_t<I, variant>,
+      typename =  enable_if_t<std::is_constructible<Tj, Tp>::value>>
+  constexpr variant(T&& v)
+      noexcept(std::is_nothrow_constructible<Tj, Tp>::value)
+      : variaint(in_place_inde<I>, std::forward<Tp>(v)) {}
 
-  template <typename Tp, typename... args>
-  constexpr explicit variant(in_place_type_t<Tp>, Args&&... args);
+  // Constucts a variant of an alternative type from the arguments through
+  // direct-initialization.
+  template <typename Tp, typename... args,
+      typename = enable_if_t<
+          variant_internal::TypeCount<Tp, variant>::value == 1 &&
+          std::is_constructible<Tp, Args...>::value>>
+  constexpr explicit variant(in_place_type_t<Tp>, Args&&... args)
+      : variant(in_place_index<variant_internal::IndexOf<Tp, variant>::value>,
+                std::forward<Args>(args)...) {}
 
-  template <typename Tp, typename Up, typename... args>
-  constexpr explicit variant(in_place_type_t<Tp>, std::initializer_list<Up> il, &&... args);
+  // Constucts a variant of an alternative type from an initializer list
+  // and other arguments through direct-initialization.
+  template <typename Tp, typename Up, typename... args,
+      typename = enable_if_t
+          variant_internal::TypeCount<Tp, variant>::value == 1 &&
+          std::is_constructible<Tp, std::initializer_list<Up>, Args...>::value>>
+  constexpr explicit variant(
+      in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args)
+      : variant(in_place_index<variant_internal::IndexOf<Tp, variant>::value>,
+                il, std::forward<Args>(args)...) {}
 
-  template <std::size_t I, typename... Args>
-  constexpr explicit variant(in_place_type_t<Tp>, Args&&... args);
+  // Constucts a variant of an alternative type from an provided index,
+  // through value-initialization and other arguments.
+  template <std::size_t I, typename... Args,
+      typename Tp = variant_internal::Typeof<I, variant>,
+      typenanme = enable_if_t<std::is_constructible<Tp, Args...>::value>>
+  constexpr explicit variant(in_place_type_t<Tp>, Args&&... args)
+      : Base(in_place_index<I>, std::forward<Args>(args)...),
+        DefaultConstructor(enable_default_constructors_tag) {}
 
-  template <std::size_t I, typename Up, typename... Args>
-  constexpr explicit variant(in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args);
+  // Consturcts a variant of an alternative type from a provided index,
+  // through value-initialization of an initializer list and other
+  // arguments.
+  template <std::size_t I, typename Up, typename... Args,
+      typename Tp = variant_internal::Typeof<I, variant>,
+      typenanme = enable_if_t<
+          std::is_constructible<Tp, std::initializer_list<Up>, Args...>::value>>
+  constexpr explicit variant(
+      in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args)
+      : Base(in_place_index<I>, il, std::forward<Args>(args)...),
+        DefaultConstructor(enable_default_constructors_tag) {}
 
-  ~variant();
+  // Converting assignment
+  template <typename Tp,
+      std::size_t I = variant_internal::IndexOfCtorType<Tp, variant>::value,
+      typename Tj = variant_alternative_t<I, variant>,
+      typename =  enable_if_t<
+          std::is_assignable<Tj&, Tp>::value &&
+          std::is_constructible<Tj, Tp>::value>>
+  variant& operator=(Tp&& v)
+       noexcept(std::is_nothrow_constructible<Tj, Tp>::value &&
+                std::is_nothrow_assignable<Tj&, Tp>::value) {
+    // TODO
+  }
 
   // Observers
   constexpr std::size_t index() const noexcept;

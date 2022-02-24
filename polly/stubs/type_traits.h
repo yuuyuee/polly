@@ -41,8 +41,11 @@ struct conjunction<T1, T2, T3, Tn...>
 template <typename Tp>
 struct negation: public std::integral_constant<bool, !Tp::value> {};
 
+template <bool Value, typename Tp = void>
+using enable_if_t = typename std::enable_if<Value, Tp>::type;
+
 template <typename... Tn>
-using Requires = typename std::enable_if<conjunction<Tn...>::value, bool>::type;
+using Requires = enable_if_t<conjunction<Tn...>::value, bool>;
 
 template <typename Tp>
 using remove_cvref = std::remove_cv<typename std::remove_reference<Tp>::type>;
@@ -229,5 +232,60 @@ using StdSwapIsUnconstrained = is_swappable<void()>;
 template <typename Tp>
 struct is_nothrow_swappable:
     public type_traits_internal::is_nothrow_swappable_helper<Tp>::type {};
+
+// integer_sequence
+// The class template integer_sequence represents a compile-time sequence
+// of integers. When used as an argument to a function template,
+// the parameter pack Ints can be deduced and used in pack expansion.
+template <typename Tp, Tp... Idx>
+struct integer_sequence {
+  using value_type = Tp;
+  static constexpr std::size_t size() noexcept { return sizeof...(Idx); }
+};
+
+#if POLLY_HAS_BUILTIN(__make_integer_seq)
+template <typename Tp, Tp Num>
+using make_integer_sequence = __make_integer_seq<integer_sequence, Tp, Num>;
+#else // POLLY_HAS_BUILTIN(__make_integer_seq)
+namespace type_traits_internal {
+template <typename Seq, std::size_t Num, std::size_t Rem>
+struct integer_pack;
+
+template <typename Tp, Tp... Idx, std::size_t Num>
+struct integer_pack<integer_sequence<Tp, Idx...>, Num, 0> {
+  using type = integer_sequence<Tp, Idx..., (Idx + Num)...>;
+};
+
+template <typename Tp, Tp... Idx, std::size_t Num>
+struct integer_pack<integer_sequence<Tp, Idx...>, Num, 1> {
+  using type = integer_sequence<Tp, Idx..., (Idx + Num)..., Num * 2>;
+};
+
+template <typename Tp, std::size_t Num>
+struct make_integer_sequence {
+  using type = typename integer_pack<
+      typename make_integer_sequence<Tp, Num / 2>::type, Num / 2, Num % 2
+  >::type;
+};
+
+template <typename Tp>
+struct make_integer_sequence<Tp, 0> {
+  using type = integer_sequence<Tp>;
+};
+
+} // namespace type_traits_internal
+
+template <typename Tp, Tp Num>
+using make_integer_sequence = type_traits_internal::make_integer_sequence<Tp, Num>;
+#endif // POLLY_HAS_BUILTIN(__make_integer_seq)
+
+template <std::size_t... Idx>
+using index_sequence = integer_sequence<std::size_t, Idx...>;
+
+template <std::size_t Num>
+using make_index_sequence = make_integer_sequence<std::size_t, Num>;
+
+template <typename... Types>
+using index_sequence_for = make_index_sequence<sizeof...(Types)>;
 
 } // namespace polly

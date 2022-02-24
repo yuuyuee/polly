@@ -45,15 +45,6 @@ struct StructorListener {
   int volatile_move_assign = 0;
 };
 
-// Suppress MSVC warnings.
-// 4521: multiple copy constructors specified
-// 4522: multiple assignment operators specified
-// We wrote multiple of them to test that the correct overloads are selected.
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4521)
-#pragma warning( disable : 4522)
-#endif
 struct Listenable {
   static StructorListener* listener;
 
@@ -85,9 +76,6 @@ struct Listenable {
   }
   ~Listenable() { ++listener->destruct; }
 };
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
 StructorListener* Listenable::listener = nullptr;
 
@@ -215,16 +203,9 @@ TEST(optionalTest, CopyConstructor) {
 #ifndef POLLY_GLIBCXX_OPTIONAL_TRIVIALITY_BUG
   EXPECT_TRUE(polly::is_trivially_copy_constructible<polly::optional<int>>::value);
   EXPECT_TRUE(polly::is_trivially_copy_constructible<polly::optional<const int>>::value);
-#ifndef _MSC_VER
-  // See defect report "Trivial copy/move constructor for class with volatile
-  // member" at
-  // http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#2094
-  // A class with non-static data member of volatile-qualified type should still
-  // have a trivial copy constructor if the data member is trivial.
-  // Also a cv-qualified scalar type should be trivially copyable.
+
   EXPECT_TRUE(polly::is_trivially_copy_constructible<
               polly::optional<volatile int>>::value);
-#endif  // _MSC_VER
 #endif  // POLLY_GLIBCXX_OPTIONAL_TRIVIALITY_BUG
 
   // constexpr copy constructor for trivially copyable types
@@ -255,17 +236,9 @@ TEST(optionalTest, CopyConstructor) {
     EXPECT_TRUE(polly::is_trivially_copy_constructible<
                 polly::optional<const TrivialCopyable>>::value);
 #endif
-    // When testing with VS 2017 15.3, there seems to be a bug in MSVC
-    // std::optional when T is volatile-qualified. So skipping this test.
-    // Bug report:
-    // https://connect.microsoft.com/VisualStudio/feedback/details/3142534
-#if defined(POLLY_USES_STD_OPTIONAL) && defined(_MSC_VER) && _MSC_VER >= 1911
-#define POLLY_MSVC_OPTIONAL_VOLATILE_COPY_BUG 1
-#endif
-#ifndef POLLY_MSVC_OPTIONAL_VOLATILE_COPY_BUG
+
     EXPECT_FALSE(std::is_copy_constructible<
                  polly::optional<volatile TrivialCopyable>>::value);
-#endif
   }
 }
 
@@ -964,25 +937,6 @@ TEST(optionalTest, PointerStuff) {
 #endif
 #endif
 
-// MSVC has a bug with "cv-qualifiers in class construction", fixed in 2017. See
-// https://docs.microsoft.com/en-us/cpp/cpp-conformance-improvements-2017#bug-fixes
-// The compiler some incorrectly ingores the cv-qualifier when generating a
-// class object via a constructor call. For example:
-//
-// class optional {
-//   constexpr T&& value() &&;
-//   constexpr const T&& value() const &&;
-// }
-//
-// using COI = const polly::optional<int>;
-// static_assert(2 == COI(2).value(), "");  // const &&
-//
-// This should invoke the "const &&" overload but since it ignores the const
-// qualifier it finds the "&&" overload the best candidate.
-#if defined(_MSC_VER) && _MSC_VER < 1910
-#define POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG
-#endif
-
 TEST(optionalTest, Value) {
   using O = polly::optional<std::string>;
   using CO = const polly::optional<std::string>;
@@ -1027,7 +981,7 @@ TEST(optionalTest, Value) {
   // test constexpr value()
   constexpr polly::optional<int> o1(1);
   static_assert(1 == o1.value(), "");  // const &
-#if !defined(_MSC_VER) && !defined(POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
+#if !defined(POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
   using COI = const polly::optional<int>;
   static_assert(2 == COI(2).value(), "");  // const &&
 #endif
@@ -1067,7 +1021,7 @@ TEST(optionalTest, DerefOperator) {
 
   constexpr polly::optional<int> opt1(1);
   static_assert(*opt1 == 1, "");
-#if !defined(_MSC_VER) && !defined(POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
+#if !defined(POLLY_SKIP_OVERLOAD_TEST_DUE_TO_GCC_BUG)
   using COI = const polly::optional<int>;
   static_assert(*COI(2) == 2, "");
 #endif
