@@ -38,6 +38,43 @@ template <typename Variant>
 struct variant_size<const volatile Variant>
     : public variant_size<Variant>::value {};
 
+// variant_alternative
+// Provides compile-time indexed access to the types of the alternatives of the
+// possibly cv-qualified variant, combining cv-qualifications of the variant
+// with the cv-qualifications of the alternative.
+template <std::size_t I, typename Variant>
+struct variant_alternative;
+
+template <std::size_t I, typename First, typename... Last>
+struct variant_alternative<I, variant<First, Last...>>
+    : public variant_alternative<I - 1, variant<Last...>> {};
+
+template <typename First, typename... Last>
+struct variant_alternative<0, variant<First, Last...>> {
+  using type = First;
+};
+
+template <std::size_t I, typename Variant>
+using variant_alternative_t = typename variant_alternative<I, Variant>::type;
+
+// Specialization for const qualified variant.
+template <std::size_t I, typename Tp>
+struct variant_alternative<I, const Tp> {
+  using type = const typename variant_alternative<I, Tp>::type;
+};
+
+// Specialization for volatile qualified variant.
+template <std::size_t I, typename Tp>
+struct variant_alternative<I, volatile Tp> {
+  using type = volatile typename variant_alternative<I, Tp>::type;
+};
+
+// Specialization for const volatile qualified variant.
+template <std::size_t I, typename Tp>
+struct variant_alternative<I, const volatile Tp> {
+  using type = const volatile typename variant_alternative<I, Tp>::type;
+};
+
 namespace variant_internal {
 template <typename Tp, typename Variant>
 struct TypeCount;
@@ -59,8 +96,7 @@ template <typename Tp, typename First, typename... Last>
 struct IndexOf<Tp, variant<Tp, First, Last...>>
     : public std::integral_constant<
         std::size_t,
-        TypeCount<Tp, variant<First>>::value ? 0 : IndexOf<Tp, variant<Last...>>::value + 1
-      > {};
+        std::is_same<Tp, First>::value ? 0 : IndexOf<Tp, variant<Last...>>::value + 1> {};
 
 template <std::size_t N, typename Variant>
 struct TypeOf;
@@ -84,53 +120,53 @@ struct Traits {
 
   struct is_copy_ctor {
     static constexpr bool value =
-        conjunction<std::is_copy_constructible<Types>...>::value;
+        polly::conjunction<std::is_copy_constructible<Types>...>::value;
   };
 
   struct is_move_ctor {
     static constexpr bool value =
-        conjunction<std::is_move_constructible<Types>...>::value;
+        polly::conjunction<std::is_move_constructible<Types>...>::value;
   };
 
   struct is_copy_assign {
     static constexpr bool value =
         Traits<Types...>::is_copy_ctor::value &&
-        conjunction<std::is_copy_assignable<Types>...>::value;
+        polly::conjunction<std::is_copy_assignable<Types>...>::value;
   };
 
   struct is_move_assign {
     static constexpr bool value =
         Traits<Types...>::is_move_ctor::value &&
-        conjunction<std::is_move_assignable<Types>...>::value;
+        polly::conjunction<std::is_move_assignable<Types>...>::value;
   };
 
   struct is_trivial_dtor {
     static constexpr bool value =
-        conjunction<std::is_trivially_destructible<Types>...>::value;
+        polly::conjunction<std::is_trivially_destructible<Types>...>::value;
   };
 
   struct is_trivial_copy_ctor {
     static constexpr bool value =
-        conjunction<is_trivially_copy_constructible<Types>...>::value;
+        polly::conjunction<polly::is_trivially_copy_constructible<Types>...>::value;
   };
 
   struct is_trivial_move_ctor {
     static constexpr bool value =
-        conjunction<is_trivially_move_constructible<Types>...>::value;
+        polly::conjunction<polly::is_trivially_move_constructible<Types>...>::value;
   };
 
   struct is_trivial_copy_assign {
     static constexpr bool value =
         Traits<Types...>::is_trivial_dtor::value &&
         Traits<Types...>::is_trivial_copy_ctor::value &&
-        conjunction<is_trivially_copy_assignable<Types>...>::value;
+        polly::conjunction<polly::is_trivially_copy_assignable<Types>...>::value;
   };
 
   struct is_trivial_move_assign {
     static constexpr bool value =
         Traits<Types...>::is_trivial_dtor::value &&
         Traits<Types...>::is_trivial_move_ctor::value &&
-        conjunction<is_trivially_move_assignable<Types>...>::value;
+        polly::conjunction<polly::is_trivially_move_assignable<Types>...>::value;
   };
 
   struct is_nothrow_default_ctor {
@@ -146,7 +182,7 @@ struct Traits {
 
   struct is_nothrow_move_ctor {
     static constexpr bool value =
-        conjunction<std::is_nothrow_move_constructible<Types>...>::value;
+        polly::conjunction<std::is_nothrow_move_constructible<Types>...>::value;
   };
 
   struct is_nothrow_copy_assign {
@@ -156,7 +192,7 @@ struct Traits {
   struct is_nothrow_move_assign {
     static constexpr bool value =
         Traits<Types...>::is_nothrow_move_ctor::value &&
-        conjunction<is_trivially_move_assignable<Types>...>::value;
+        polly::conjunction<polly::is_trivially_move_assignable<Types>...>::value;
   };
 };
 
@@ -184,7 +220,7 @@ struct BuildFun {
 // For which Ti x[] = {std::forward<Tp>(t)}
 template <std::size_t I, typename Tp, typename Ti>
 struct BuildFun<I, Tp, Ti, false,
-    void_t<ConvertCtorType<Ti, Tp>> {
+    polly::void_t<ConvertCtorType<Ti, Tp>> {
   // Fn is function for type Ti with index I
   static SizeType<I> Fn(Ti);
 };
@@ -192,16 +228,16 @@ struct BuildFun<I, Tp, Ti, false,
 // For which Ti is cv bool, remove_cvref_t<Tp> is bool
 template <std::size_t I, typename Tp, typename Ti>
 struct BuildFun<I, Tp, Ti, true,
-    enable_if_t<std::is_same<remove_cvref_t<Tp>, bool>::value> {
+    enable_if_t<std::is_same<polly::remove_cvref_t<Tp>, bool>::value> {
   static SizeType<I> Fn(Ti);
 };
 
 tempate <typename Tp, typename Variant,
-    typename = make_index_sequence<variant_size<Variant>::value>>
+    typename = polly::make_index_sequence<variant_size<Variant>::value>>
 struct BuildFuns;
 
 template <typename Tp, typename... Ti, std::size_t... I>
-struct BuildFuns<Tp, variant<Ti...>, index_sequence<I...>>
+struct BuildFuns<Tp, variant<Ti...>, polly::index_sequence<I...>>
     public BuildFun<I, Tp, Ti>... {
   using BuildFun<I, Tp, Ti>::Fn;
 };
@@ -210,31 +246,47 @@ tmeplate <typename Tp, typename Variant>
 using FunType = decltype(BuildFuns<Tp, Variant>::Fn(std::declval<Tp>()));
 
 template <typename Tp, typename Variant, typename = void>
-struct IndexOfConstructType: public SizeType<variant_npos> {};
+struct IndexOfCtorType: public SizeType<variant_npos> {};
 
-template <typename Tp, typename Variant, typename = void_t<FunType<Tp, Variant>>>
+template <typename Tp, typename Variant,
+    typename = polly::void_t<FunType<Tp, Variant>>>
 struct IndexOfCtorType: public FunType<Tp, Variant> {};
-
 
 template <typename... Types>
 union Union {};
 
 template <typename First, typename... Last>
 union Union<First, Last...> {
-  using union_type = Union<Last...>;
+  using UnionType = Union<Last...>;
 
   constexpr Union(): last() {}
 
   template<typename... Args>
-  constexpr explicit Union(in_place_index_t<0>, Args&&... args)
+  constexpr explicit Union(polly::in_place_index_t<0>, Args&&... args)
       : first(std::forward<Args>(args)...) {}
 
   template<std::size_t I, typename... Args>
-  constexpr explicit Union(in_place_index_t<I>, Args&&... args)
-      : last(in_place_index_t<I - 1>, std::forward<Args>(args)...) {}
+  constexpr explicit Union(polly::in_place_index_t<I>, Args&&... args)
+      : last(polly::in_place_index_t<I - 1>, std::forward<Args>(args)...) {}
+
+  constexpr First& Get() noexcept {
+    return first;
+  }
+
+  constexpr First const& Get() noexcept {
+    return first;
+  }
+
+  constexpr First&& Get() noexcept {
+    return std::move(first);
+  }
+
+  constexpr const First&&  Get() noexcept {
+    return std::move(first);
+  }
 
   First first;
-  union_type last;
+  UnionType last;
 };
 
 template <typename... Types>
@@ -242,22 +294,38 @@ union UnionDestructible {};
 
 template <typename First, typename... Last>
 union UnionDestructible<First, Last...> {
-  using union_type = UnionDestructible<Last...>;
+  using UnionType = UnionDestructible<Last...>;
 
   constexpr Union(): last() {}
 
   template<typename... Args>
-  constexpr explicit Union(in_place_index_t<0>, Args&&... args)
+  constexpr explicit Union(polly::in_place_index_t<0>, Args&&... args)
       : first(std::forward<Args>(args)...) {}
 
   template<std::size_t I, typename... Args>
-  constexpr explicit Union(in_place_index_t<I>, Args&&... args)
-      : last(in_place_index_t<I - 1>, std::forward<Args>(args)...) {}
+  constexpr explicit Union(polly::in_place_index_t<I>, Args&&... args)
+      : last(polly::in_place_index_t<I - 1>, std::forward<Args>(args)...) {}
 
   ~UnionDestructible() {}
 
+  constexpr First& Get() noexcept {
+    return first;
+  }
+
+  constexpr First const& Get() noexcept {
+    return first;
+  }
+
+  constexpr First&& Get() noexcept {
+    return std::move(first);
+  }
+
+  constexpr const First&&  Get() noexcept {
+    return std::move(first);
+  }
+
   First first;
-  union_type last;
+  UnionType last;
 };
 
 template <typename... Types>
@@ -274,22 +342,54 @@ struct VariantStorage<false, Types...> {
   constexpr VariantStorage(): index(variant_npos) {}
 
   template <std::size_t I, typename... Args>
-  constexpr explicit VariantStorage(in_place_index_t<I>, Args&&... args)
-      : state(in_place_index_t<I>, std::forward<Args>(args)...), index(I) {}
+  constexpr explicit VariantStorage(polly::in_place_index_t<I>, Args&&... args)
+      : state(polly::in_place_index_t<I>, std::forward<Args>(args)...), index(I) {}
 
   ~VariantStorage() {}
+
+  constexpr bool Valid() const noexcept {
+    return index != variant_npos;
+  }
+
+  void Reset() {
+    if (Valid()) {
+      // TODO
+      index = variant_npos;
+    }
+  }
+
+  void* Get() const noexcept {
+    return const_cast<void*>(
+        static_cast<const void*>(std::addressof(&state)));
+  }
 
   VariantUnion<Types...> state;
   std::size_t index;
 };
+
+template <typename Tp, std::size_t I, typename StoreType>
+constexpr
 
 template <typename... Types>
 struct VariantStorage<true, Types...> {
   constexpr VariantStorage(): index(variant_npos) {}
 
   template <std::size_t I, typename... Args>
-  constexpr explicit VariantStorage(in_place_index_t<I>, Args&&... args)
-      : state(in_place_index_t<I>, std::forward<Args>(args)...), index(I) {}
+  constexpr explicit VariantStorage(polly::in_place_index_t<I>, Args&&... args)
+      : state(polly::in_place_index_t<I>, std::forward<Args>(args)...), index(I) {}
+
+  constexpr bool Valid() const noexcept {
+    return index != variant_npos;
+  }
+
+  void Reset() {
+    index = variant_npos;
+  }
+
+  void* Get() const noexcept {
+    return const_cast<void*>(
+        static_cast<const void*>(std::addressof(&state)));
+  }
 
   VariantUnion<Types...> state;
   std::size_t index;
@@ -408,10 +508,10 @@ struct VariantBase: public MoveAssignBaseType<Tyeps...> {
 
   constexpr VariantBase()
       noexcept(Traits<Types...>::is_nothrow_default_ctor::value)
-      : VariantBase(in_place_index<0>) {}
+      : VariantBase(polly::in_place_index<0>) {}
 
   template <std::size_t I, typename... Args>
-  constexpr explicit VariantBase(in_place_index_t<I> i, Args&&... args)
+  constexpr explicit VariantBase(polly::in_place_index_t<I> i, Args&&... args)
       : Base(i, std::forward<Args>(args)...) {}
 
   VariantBase(const VariantBase&) = default;
@@ -439,16 +539,18 @@ template <typename Tp>
 struct NotInPlaceTagImpl: public std::true_type {};
 
 template <typename Tp>
-struct NotInPlaceTagImpl<in_place_type_t<Tp>>: public std::false_type {};
+struct NotInPlaceTagImpl<polly::in_place_type_t<Tp>>: public std::false_type {};
 
 template <std::size_t I>
-struct NotInPlaceTagImpl<in_place_index_t<I>>: public std::false_type {};
+struct NotInPlaceTagImpl<polly::in_place_index_t<I>>: public std::false_type {};
 
 template <typename Tp>
-using NotInPlaceTag = NotInPlaceTagImpl<remove_cvref_t<Tp>>;
+using NotInPlaceTag = NotInPlaceTagImpl<polly::remove_cvref_t<Tp>>;
 
 template <typename Tp, typename Variant>
-using NotSelf = negation<std::is_same<Variant, remove_cvref_t<Tp>>>;
+using NotSelf = polly::negation<std::is_same<Variant, polly::remove_cvref_t<Tp>>>;
+
+// get helper
 
 } // namespace variant_internal
 

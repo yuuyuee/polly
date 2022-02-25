@@ -63,7 +63,7 @@ public:
 };
 
 // Throw delegate
-[[noreturn]] inline void ThrowBadVariantAccess() {
+[[noreturn]] inline void ThrowBadVariantAccess(const char* what = nullptr) {
 #ifndef POLLY_HAVE_EXCEPTIONS
   POLLY_RAW_LOG(FATAL, bad_variant_access{}.what());
 #else
@@ -71,46 +71,10 @@ public:
 #endif
 }
 
-// variant_alternative
-// Provides compile-time indexed access to the types of the alternatives of the
-// possibly cv-qualified variant, combining cv-qualifications of the variant
-// with the cv-qualifications of the alternative.
-template <std::size_t I, typename Variant>
-struct variant_alternative;
-
-template <std::size_t I, typename First, typename... Last>
-struct variant_alternative<I, variant<First, Last...>>
-    : public variant_alternative<I - 1, variant<Last...>> {};
-
-template <typename First, typename... Last>
-struct variant_alternative<0, variant<First, Last...>> {
-  using type = First;
-};
-
-template <std::size_t I, typename Variant>
-using variant_alternative_t = typename variant_alternative<I, Variant>::type;
-
-// Specialization for const qualified variant.
-template <std::size_t I, typename Tp>
-struct variant_alternative<I, const Tp> {
-  using type = const typename variant_alternative<I, Tp>::type;
-};
-
-// Specialization for volatile qualified variant.
-template <std::size_t I, typename Tp>
-struct variant_alternative<I, volatile Tp> {
-  using type = volatile typename variant_alternative<I, Tp>::type;
-};
-
-// Specialization for const volatile qualified variant.
-template <std::size_t I, typename Tp>
-struct variant_alternative<I, const volatile Tp> {
-  using type = const volatile typename variant_alternative<I, Tp>::type;
-};
-
 // Non-member functions
 
 // visit
+// Calls
 // TODO
 
 // holds_alternative
@@ -134,57 +98,61 @@ constexpr bool holds_alternative(const variant<Types...>& v) noexcept {
 template <std::size_t I, typename... Types>
 constexpr variant_alternative_t<I, variant<Types...>>& get(
     variant<Types...>& v) {
-
+  static_assert(I < sizeof...(Types),
+      "The index must be in [0, number of alternatives]");
+  return v.index() == I
+      ? variant_internal::GetImpl<I, variant<Types...>>::(v)
+      : (ThrowBadVariantAccess(), {});
 }
 
 template <std::size_t I, typename... Types>
-constexpr variant_alternative_t<I, const variant<Types...>>& get(
+constexpr variant_alternative_t<I, variant<Types...>> const& get(
     const variant<Types...>& v) {
-
+  static_assert(I < sizeof...(Types),
+      "The index must be in [0, number of alternatives]");
+  return v.index() == I
+      ? variant_internal::GetImpl<I, variant<Types...>>::(v)
+      : (ThrowBadVariantAccess(), {});
 }
 
 template <std::size_t I, typename... Types>
 constexpr variant_alternative_t<I, variant<Types...>>&& get(
-    const variant<Types...>&& v) {
-
+    variant<Types...>&& v) {
+  static_assert(I < sizeof...(Types),
+      "The index must be in [0, number of alternatives]");
+  return v.index() == I
+      ? variant_internal::GetImpl<I, variant<Types...>>::(std::move(v))
+      : (ThrowBadVariantAccess(), {});
 }
 
 template <std::size_t I, typename... Types>
-constexpr variant_alternative_t<I, const variant<Types...>>&& get(
+constexpr variant_alternative_t<I, variant<Types...>> const&& get(
     const variant<Types...>&& v) {
-
+  static_assert(I < sizeof...(Types),
+      "The index must be in [0, number of alternatives]");
+  return v.index() == I
+      ? variant_internal::GetImpl<I, variant<Types...>>::(std::move(v))
+      : (ThrowBadVariantAccess(), {});
 }
 
 template <typename Tp, typename... Types>
 constexpr Tp const& get(const variant<Types...>& v) {
-  if (POLLY_EXPECT_TRUE(holds_alternative<Tp>(v))) {
-    return get<variant_internal::index_of<Tp, variant<Types...>>::value>(v);
-  }
-  ThrowBadVariantAccess();
+  return get<variant_internal::IndexOf<Tp, variant<Types...>>::value>(v);
 }
 
 template <typename Tp, typename... Types>
 constexpr Tp& get(variant<Types...>& v) {
-  if (POLLY_EXPECT_TRUE(holds_alternative<Tp>(v))) {
-    return get<variant_internal::index_of<Tp, variant<Types...>>::value>(v);
-  }
-  ThrowBadVariantAccess();
+  return get<variant_internal::IndexOf<Tp, variant<Types...>>::value>(v);
 }
 
 template <typename Tp, typename... Types>
 constexpr Tp&& get(const variant<Types...>&& v) {
-  if (POLLY_EXPECT_TRUE(holds_alternative<Tp>(v))) {
-    return get<variant_internal::index_of<Tp, variant<Types...>>::value>(std::move(v));
-  }
-  ThrowBadVariantAccess();
+  return get<variant_internal::IndexOf<Tp, variant<Types...>>::value>(std::move(v));
 }
 
 template <typename Tp, typename... Types>
 constexpr Tp const&& get(const variant<const Types...>&& v) {
-  if (POLLY_EXPECT_TRUE(holds_alternative<Tp>(v))) {
-    return get<variant_internal::index_of<Tp, variant<Types...>>::value>(std::move(v));
-  }
-  ThrowBadVariantAccess();
+  return get<variant_internal::IndexOf<Tp, variant<Types...>>::value>(std::move(v));
 }
 
 // get_if
@@ -238,6 +206,13 @@ void swap(variant<Types...>& lhs, variant<Types...>& rhs) noexcept {
 }
 
 // variant
+// The class template variant represents a type-safe union. An instance of
+// variant at any given time either holds a value of one of it's alternative
+// types or in the case of error, no value.
+// As variant is not permitted to hold reference, arrays or the type void.
+// Empty variants are also ill-formed.
+// A variant is permitted to hold the same type more than once and to hold
+// differently cv-qualified versions of the same type.
 template <typename... Types>
 class variant
     : private variant_internal::VariantBase<Types...>,
@@ -245,10 +220,13 @@ class variant
       private variant_internal::VariantEnableCopyMove<Types...> {
 private:
   static_assert(sizeof...(Types) > 0,
-  "variant must have at least on alternative");
-  static_assert(negation<conjunction<std::is_object<Types>...>>::value &&
-                negation<conjunction<negation<std::is_array<Types>>...>>::value,
-  "variant all types must be (posibily cv-qualified) non-array object types");
+      "variant must have at least on alternative");
+  static_assert(polly::conjunction<polly::negation<std::is_referencec<Types>>...>::value,
+      "variant must have no reference alternative");
+  static_assert(polly::conjunction<polly::negation<std::is_array<Types>>...>::value,
+      "variant must have no array alternative");
+  static_assert(polly::conjunction<polly::negation<std::is_void<Types>>...>::value,
+    "variant must have no void alternative");
 
   using Base = variant_internal::variant_base<Types...>;
   using DefaultConstructor =
@@ -267,8 +245,8 @@ public:
   // resolution of the provided forwarding arguments through
   // direct-initialization.
   template <typename Tp,
-      typename = enable_if_t<variant_internal::NotInPlaceTag<Tp>::value>,
-      typename = enable_if_t<variant_internal::NotSelf<Tp, variant>::value>,
+      typename = polly::enable_if_t<variant_internal::NotInPlaceTag<Tp>::value>,
+      typename = polly::enable_if_t<variant_internal::NotSelf<Tp, variant>::value>,
       std::size_t I = variant_internal::IndexOfCtorType<Tp, variant>::value,
       typename Tj = variant_alternative_t<I, variant>,
       typename =  enable_if_t<std::is_constructible<Tj, Tp>::value>>
@@ -279,72 +257,115 @@ public:
   // Constucts a variant of an alternative type from the arguments through
   // direct-initialization.
   template <typename Tp, typename... args,
-      typename = enable_if_t<
+      typename = polly::enable_if_t<
           variant_internal::TypeCount<Tp, variant>::value == 1 &&
           std::is_constructible<Tp, Args...>::value>>
-  constexpr explicit variant(in_place_type_t<Tp>, Args&&... args)
-      : variant(in_place_index<variant_internal::IndexOf<Tp, variant>::value>,
+  constexpr explicit variant(polly::in_place_type_t<Tp>, Args&&... args)
+      : variant(polly::in_place_index<variant_internal::IndexOf<Tp, variant>::value>,
                 std::forward<Args>(args)...) {}
 
   // Constucts a variant of an alternative type from an initializer list
   // and other arguments through direct-initialization.
   template <typename Tp, typename Up, typename... args,
-      typename = enable_if_t
+      typename = polly::enable_if_t
           variant_internal::TypeCount<Tp, variant>::value == 1 &&
           std::is_constructible<Tp, std::initializer_list<Up>, Args...>::value>>
   constexpr explicit variant(
-      in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args)
-      : variant(in_place_index<variant_internal::IndexOf<Tp, variant>::value>,
+      polly::in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args)
+      : variant(polly::in_place_index<variant_internal::IndexOf<Tp, variant>::value>,
                 il, std::forward<Args>(args)...) {}
 
   // Constucts a variant of an alternative type from an provided index,
   // through value-initialization and other arguments.
   template <std::size_t I, typename... Args,
       typename Tp = variant_internal::Typeof<I, variant>,
-      typenanme = enable_if_t<std::is_constructible<Tp, Args...>::value>>
-  constexpr explicit variant(in_place_type_t<Tp>, Args&&... args)
-      : Base(in_place_index<I>, std::forward<Args>(args)...),
-        DefaultConstructor(enable_default_constructors_tag) {}
+      typenanme = polly::enable_if_t<std::is_constructible<Tp, Args...>::value>>
+  constexpr explicit variant(polly::in_place_type_t<Tp>, Args&&... args)
+      : Base(polly::in_place_index<I>, std::forward<Args>(args)...),
+        DefaultConstructor(polly::enable_default_constructors_tag) {}
 
   // Consturcts a variant of an alternative type from a provided index,
   // through value-initialization of an initializer list and other
   // arguments.
   template <std::size_t I, typename Up, typename... Args,
       typename Tp = variant_internal::Typeof<I, variant>,
-      typenanme = enable_if_t<
+      typenanme = polly::enable_if_t<
           std::is_constructible<Tp, std::initializer_list<Up>, Args...>::value>>
   constexpr explicit variant(
-      in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args)
-      : Base(in_place_index<I>, il, std::forward<Args>(args)...),
-        DefaultConstructor(enable_default_constructors_tag) {}
+      polly::in_place_type_t<Tp>, std::initializer_list<Up> il, Args&&... args)
+      : Base(polly::in_place_index<I>, il, std::forward<Args>(args)...),
+        DefaultConstructor(polly::enable_default_constructors_tag) {}
 
   // Converting assignment
   template <typename Tp,
       std::size_t I = variant_internal::IndexOfCtorType<Tp, variant>::value,
       typename Tj = variant_alternative_t<I, variant>,
-      typename =  enable_if_t<
+      typename =  polly::enable_if_t<
           std::is_assignable<Tj&, Tp>::value &&
           std::is_constructible<Tj, Tp>::value>>
   variant& operator=(Tp&& v)
        noexcept(std::is_nothrow_constructible<Tj, Tp>::value &&
                 std::is_nothrow_assignable<Tj&, Tp>::value) {
-    // TODO
+    if (this->index() == I) {
+      std::get<I>(*this) = std::forward<Tp>(v);
+    } else {
+      if (std::is_nothrow_constructible<Tj, Tp>::value ||
+          !std::is_nothrow_move_constructible<Tj>) {
+        this->emplace<I>(std::forward<Tp>(v));
+      } else {
+        this->operator=(variant(std::forward<Tp>(v)));
+      }
+    }
+    return *this;
   }
 
   // Observers
-  constexpr std::size_t index() const noexcept;
 
-  constexpr bool valueless_by_exception() const noexcept;
+  // Returns the zero-based index of the alternative that is currently
+  // held by the variant. If the variant is `valueless_by_exception`,
+  // return `variant_npos`.
+  constexpr std::size_t index() const noexcept {
+    return this->index;
+  }
+
+  // Returns false if and only if the variant holds a value.
+  constexpr bool valueless_by_exception() const noexcept {
+    return this->index == polly::variant_npos;
+  }
 
   // Modifiers
   template <typename Tp, typename... Args>
-  Tp& emplace(Args&&... args);
+  polly::enable_if_t<
+      std::is_constructible<Tp, Args...>::value &&
+      variant_internal::TypeCount<Tp, variant>::value == 1,
+      Tp&>
+  emplace(Args&&... args) {
+    return this->emplace<variant_internal::IndexOf<Tp, variant>::value>(
+        std::forward<Args>(args)...);
+  }
 
   template <typename Tp, typename Up, typename... Args>
-  Tp& emplace(std::initializer_list<Up> il, &&... args);
+  polly::enable_if_t<
+      std::is_constructible<Tp, std::initializer_list<Up>, Args...>::value &&
+      variant_internal::TypeCount<Tp, variant>::value == 1,
+      Tp&>
+  Tp& emplace(std::initializer_list<Up> il, &&... args) {
+    return this->emplace<variant_internal::IndexOf<Tp, variant>::value>(
+        il, std::forward<Args>(args)...);
+  }
 
   template <std::size_t I, typename... Args>
-  variant_alternative_t<I, variant<Args...>>& emplace(Args&&... args);
+  polly::enable_if_t<
+      std::is_constructible<variant_alternative_t<I, variant>, Args...>::value,
+      variant_alternative_t<I, variant>&>
+  emplace(Args&&... args) {
+    static_assert(I < sizeof...(Types),
+        "The index must be in [0, number of alternatives]");
+    using Type = variant_alternative_t<I, variant>;
+    if (std::is_nothrow_constructible<Type, Args...>::value) {
+
+    }
+  }
 
   template <std::size_t I, typename Up, typename... Args>
   variant_alternative_t<I, variant<Args...>>& emplace(

@@ -89,8 +89,8 @@ public:
     engaged_ = false;
   }
 
-  Tp& Get() & noexcept { return payload_.value_; }
-  constexpr const Tp& Get() const & noexcept { return payload_.value_; }
+  Tp& Get() noexcept { return payload_.value_; }
+  constexpr const Tp& Get() const noexcept { return payload_.value_; }
   constexpr bool IsEngaged() const noexcept { return engaged_; }
 
   void Reset() noexcept {
