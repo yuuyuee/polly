@@ -252,100 +252,137 @@ template <typename Tp, typename Variant,
     typename = polly::void_t<FunType<Tp, Variant>>>
 struct IndexOfCtorType: public FunType<Tp, Variant> {};
 
-template <typename... Types>
-union Union {};
+template <std::size_t I, typename Variant>
+struct VariantAccessResultTypeImpl;
 
-template <typename First, typename... Last>
-union Union<First, Last...> {
-  using UnionType = Union<Last...>;
-
-  constexpr Union(): last() {}
-
-  template<typename... Args>
-  constexpr explicit Union(polly::in_place_index_t<0>, Args&&... args)
-      : first(std::forward<Args>(args)...) {}
-
-  template<std::size_t I, typename... Args>
-  constexpr explicit Union(polly::in_place_index_t<I>, Args&&... args)
-      : last(polly::in_place_index_t<I - 1>, std::forward<Args>(args)...) {}
-
-  constexpr First& Get() noexcept {
-    return first;
-  }
-
-  constexpr First const& Get() noexcept {
-    return first;
-  }
-
-  constexpr First&& Get() noexcept {
-    return std::move(first);
-  }
-
-  constexpr const First&&  Get() noexcept {
-    return std::move(first);
-  }
-
-  First first;
-  UnionType last;
+template <std::size_t I, tmeplate <typename...> class VariantTemplate, typename... Types>
+struct VariantAccessResultTypeImpl<I, VariantTemplate<Types...>&> {
+  using type = variant_alternative_t<I, variant<Types...>>&;
 };
 
-template <typename... Types>
-union UnionDestructible {};
-
-template <typename First, typename... Last>
-union UnionDestructible<First, Last...> {
-  using UnionType = UnionDestructible<Last...>;
-
-  constexpr Union(): last() {}
-
-  template<typename... Args>
-  constexpr explicit Union(polly::in_place_index_t<0>, Args&&... args)
-      : first(std::forward<Args>(args)...) {}
-
-  template<std::size_t I, typename... Args>
-  constexpr explicit Union(polly::in_place_index_t<I>, Args&&... args)
-      : last(polly::in_place_index_t<I - 1>, std::forward<Args>(args)...) {}
-
-  ~UnionDestructible() {}
-
-  constexpr First& Get() noexcept {
-    return first;
-  }
-
-  constexpr First const& Get() noexcept {
-    return first;
-  }
-
-  constexpr First&& Get() noexcept {
-    return std::move(first);
-  }
-
-  constexpr const First&&  Get() noexcept {
-    return std::move(first);
-  }
-
-  First first;
-  UnionType last;
+template <std::size_t I, tmeplate <typename...> class VariantTemplate, typename... Types>
+struct VariantAccessResultTypeImpl<I, const VariantTemplate<Types...>&> {
+  using type = const variant_alternative_t<I, variant<Types...>>&;
 };
 
-template <typename... Types>
-using VariantUnion =
-    std::conditional<
-        std::is_trivially_destructible<Union<Types...>>::value,
-        Union<Types...>, UnionDestructible<Types...>>;
+template <std::size_t I, tmeplate <typename...> class VariantTemplate, typename... Types>
+struct VariantAccessResultTypeImpl<I, VariantTemplate<Types...>&&> {
+  using type = variant_alternative_t<I, variant<Types...>>&&;
+};
 
-template <bool /* trivial dtor */, typename... Types>
-struct VariantStorage;
+template <std::size_t I, tmeplate <typename...> class VariantTemplate, typename... Types>
+struct VariantAccessResultTypeImpl<I, const VariantTemplate<Types...>&&> {
+  using type = const variant_alternative_t<I, variant<Types...>>&&;
+};
 
+template <std::size_t I, typename Variant>
+using VariantAccessResultType =
+    typename VariantAccessResultTypeImpl<I, Variant&&>::type;
+
+// class TrivialDestructibleObject
+// Uninitialized<T> is guaranteed to be a trivially destructible type
+// even if Tp is not.
+template <typename Tp, bool = polly::is_trivially_destructible<Tp>::value>
+struct TrivialDestructibleObject {
+  template <typename... Args>
+  TrivialDestructibleObject(polly::in_place_index_t<0>, Args&&... args) {
+    ::new (reinterpret_cast<void*>(std::addressof(&storage)))
+        Tp(std::forward<Args>(args)...);
+  }
+
+  Tp& Get() noexcept {
+    return *reinterpret_cast<Tp*>(std::addressof(&storage));
+  }
+
+  constexpr const Tp& Get() noexcept {
+    return *reinterpret_cast<const Tp*>(std::addressof(&storage));
+  }
+
+  Tp&& Get() noexcept {
+    return std::move(*reinterpret_cast<Tp*>(std::addressof(&storage)));
+  }
+
+  constexpr const Tp&& Get() noexcept {
+    return std::move(*reinterpret_cast<const Tp*>(std::addressof(&storage)));
+  }
+
+  std::aligned_storage<sizeof(Tp)>::type storage;
+};
+
+template <typename Tp>
+struct TrivialDestructibleObject<Tp, true> {
+  template <typename... Args>
+  TrivialDestructibleObject(polly::in_place_index_t<0>, Args&&... args)
+      : storage(std::forward<Args>(args)...) {}
+
+  Tp& Get() noexcept {
+    return storage;
+  }
+
+  constexpr const Tp& Get() noexcept {
+    return storage;
+  }
+
+  Tp&& Get() noexcept {
+    return std::move(storage);
+  }
+
+  constexpr const Tp&& Get() noexcept {
+    return std::move(storage);
+  }
+
+  Tp storage;
+};
+
+// class VariantUnion
 template <typename... Types>
-struct VariantStorage<false, Types...> {
-  constexpr VariantStorage(): index(variant_npos) {}
+union VariantUnion {};
+
+template <typename First, typename... Last>
+union VariantUnion<First, Last...> {
+  constexpr VariantUnion(): last() {}
+
+  template <typename... Args>
+  constexpr explicit VariantUnion(polly::in_place_index_t<0>, Args&&... args)
+      : first(polly::in_place_index_t<0>, std::forward<Args>(args)...) {}
 
   template <std::size_t I, typename... Args>
-  constexpr explicit VariantStorage(polly::in_place_index_t<I>, Args&&... args)
+  constexpr explicit VariantUnion(polly::in_place_index_t<I>, Args&&... args)
+      : last(polly::in_place_index_t<I - 1>, std::forward<Args>(args)...) {}
+
+  TrivialDestructibleObject<First> first;
+  VariantUnion<Last...> last;
+};
+
+template <typename Up>
+VariantAccessResultType<0, Up>
+Get(in_place_index_t<0>, Up&& u) noexcept {
+  return std::forward<Up>(u).first.Get();
+}
+
+template <std::size_t I, typpename Up>
+VariantAccessResultType<I, Up>
+Get(polly::in_place_index_t<I>, Up&& u) noexcept {
+  return Get(polly::in_place_index_t<I - 1>, std::forward<Up>(u).last);
+}
+
+template <typename Tp>
+void Destroy(const Tp* p) {
+  p-~Tp();
+}
+
+template <bool /* trivial dtor */, typename... Types>
+struct VariantStorageImpl;
+
+template <typename... Types>
+struct VariantStorageImpl<false, Types...> {
+  constexpr VariantStorageImpl(): index(variant_npos) {}
+
+  template <std::size_t I, typename... Args>
+  constexpr explicit VariantStorageImpl(polly::in_place_index_t<I>, Args&&... args)
       : state(polly::in_place_index_t<I>, std::forward<Args>(args)...), index(I) {}
 
-  ~VariantStorage() {}
+  ~VariantStorageImpl() { Reset(); }
 
   constexpr bool Valid() const noexcept {
     return index != variant_npos;
@@ -353,29 +390,21 @@ struct VariantStorage<false, Types...> {
 
   void Reset() {
     if (Valid()) {
-      // TODO
+      Destroy(&Get(polly::in_place_index_t<index>, state));
       index = variant_npos;
     }
-  }
-
-  void* Get() const noexcept {
-    return const_cast<void*>(
-        static_cast<const void*>(std::addressof(&state)));
   }
 
   VariantUnion<Types...> state;
   std::size_t index;
 };
 
-template <typename Tp, std::size_t I, typename StoreType>
-constexpr
-
 template <typename... Types>
-struct VariantStorage<true, Types...> {
-  constexpr VariantStorage(): index(variant_npos) {}
+struct VariantStorageImpl<true, Types...> {
+  constexpr VariantStorageImpl(): index(variant_npos) {}
 
   template <std::size_t I, typename... Args>
-  constexpr explicit VariantStorage(polly::in_place_index_t<I>, Args&&... args)
+  constexpr explicit VariantStorageImpl(polly::in_place_index_t<I>, Args&&... args)
       : state(polly::in_place_index_t<I>, std::forward<Args>(args)...), index(I) {}
 
   constexpr bool Valid() const noexcept {
@@ -386,22 +415,23 @@ struct VariantStorage<true, Types...> {
     index = variant_npos;
   }
 
-  void* Get() const noexcept {
-    return const_cast<void*>(
-        static_cast<const void*>(std::addressof(&state)));
-  }
-
   VariantUnion<Types...> state;
   std::size_t index;
 };
 
 template <typename... Types>
-using VariantStorageType =
-    VariantStorage<Traits<Types...>::is_trivial_dtor::value, Types...>;
+using VariantStorage =
+    VariantStorageImpl<Traits<Types...>::is_trivial_dtor::value, Types...>;
+
+template <std::size_t I, typpename Variant>
+VariantAccessResultType<I, Variant>
+Get(polly::in_place_index_t<I>, Variant&& v) noexcept {
+  return Get(polly::in_place_index_t<I>, std::forward<Variant>(v).state);
+}
 
 template <bool /* trivial copy ctor */, typename... Types>
-struct CopyConstructorBase: public VariantStorageType<Types...> {
-  using Base = VariantStorageType<Types...>;
+struct CopyConstructorBase: public VariantStorage<Types...> {
+  using Base = VariantStorage<Types...>;
   using Base::Base;
 
   CopyConstructorBase(const CopyConstructorBase& other)
@@ -414,8 +444,8 @@ struct CopyConstructorBase: public VariantStorageType<Types...> {
 };
 
 template <typename... Types>
-struct CopyConstructorBase<true, Types...>: public  VariantStorageType<Types...> {
-  using Base = VariantStorageType<Types...>;
+struct CopyConstructorBase<true, Types...>: public  VariantStorage<Types...> {
+  using Base = VariantStorage<Types...>;
   using Base::Base;
 };
 
@@ -519,7 +549,7 @@ struct VariantBase: public MoveAssignBaseType<Tyeps...> {
   VariantBase& operator=(const VariantBase&) = default;
   VariantBase& operator=(VariantBase&&) = default;
 };
-
+ss
 template <typename... Types>
 using VariantEnableDefaultConstructor =
     polly::enable_default_constructor<

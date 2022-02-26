@@ -101,8 +101,8 @@ constexpr variant_alternative_t<I, variant<Types...>>& get(
   static_assert(I < sizeof...(Types),
       "The index must be in [0, number of alternatives]");
   return v.index() == I
-      ? variant_internal::GetImpl<I, variant<Types...>>::(v)
-      : (ThrowBadVariantAccess(), {});
+      ? variant_internal::Get<I>::(polly::in_place_index_t<I>, v)
+      : (ThrowBadVariantAccess(), variant_internal::Get<I>::(polly::in_place_index_t<I>, v));
 }
 
 template <std::size_t I, typename... Types>
@@ -111,8 +111,8 @@ constexpr variant_alternative_t<I, variant<Types...>> const& get(
   static_assert(I < sizeof...(Types),
       "The index must be in [0, number of alternatives]");
   return v.index() == I
-      ? variant_internal::GetImpl<I, variant<Types...>>::(v)
-      : (ThrowBadVariantAccess(), {});
+      ? variant_internal::Get<I>::(polly::in_place_index_t<I>, v)
+      : (ThrowBadVariantAccess(), Get<I>::polly::in_place_index_t<I>, (v));
 }
 
 template <std::size_t I, typename... Types>
@@ -121,8 +121,8 @@ constexpr variant_alternative_t<I, variant<Types...>>&& get(
   static_assert(I < sizeof...(Types),
       "The index must be in [0, number of alternatives]");
   return v.index() == I
-      ? variant_internal::GetImpl<I, variant<Types...>>::(std::move(v))
-      : (ThrowBadVariantAccess(), {});
+      ? variant_internal::Get<I>::(polly::in_place_index_t<I>, std::move(v))
+      : (ThrowBadVariantAccess(), Get<I>::(polly::in_place_index_t<I>, std::move(v)));
 }
 
 template <std::size_t I, typename... Types>
@@ -131,13 +131,8 @@ constexpr variant_alternative_t<I, variant<Types...>> const&& get(
   static_assert(I < sizeof...(Types),
       "The index must be in [0, number of alternatives]");
   return v.index() == I
-      ? variant_internal::GetImpl<I, variant<Types...>>::(std::move(v))
-      : (ThrowBadVariantAccess(), {});
-}
-
-template <typename Tp, typename... Types>
-constexpr Tp const& get(const variant<Types...>& v) {
-  return get<variant_internal::IndexOf<Tp, variant<Types...>>::value>(v);
+      ? variant_internal::Get<I>::(polly::in_place_index_t<I>, std::move(v))
+      : (ThrowBadVariantAccess(), Get<I>::(polly::in_place_index_t<I>, std::move(v)));
 }
 
 template <typename Tp, typename... Types>
@@ -146,12 +141,17 @@ constexpr Tp& get(variant<Types...>& v) {
 }
 
 template <typename Tp, typename... Types>
-constexpr Tp&& get(const variant<Types...>&& v) {
+constexpr const Tp& get(const variant<Types...>& v) {
+  return get<variant_internal::IndexOf<Tp, variant<Types...>>::value>(v);
+}
+
+template <typename Tp, typename... Types>
+constexpr Tp&& get(variant<Types...>&& v) {
   return get<variant_internal::IndexOf<Tp, variant<Types...>>::value>(std::move(v));
 }
 
 template <typename Tp, typename... Types>
-constexpr Tp const&& get(const variant<const Types...>&& v) {
+constexpr const Tp&& get(const variant<const Types...>&& v) {
   return get<variant_internal::IndexOf<Tp, variant<Types...>>::value>(std::move(v));
 }
 
@@ -161,23 +161,27 @@ constexpr Tp const&& get(const variant<const Types...>&& v) {
 template <typename std::size_t I, typename... Types>
 constexpr add_pointer_t<variant_alternative_t<I, variant<Types...>>>
     get_if(variant<Types...>* p) noexcept {
-
+  return p != nullptr && p->index() == I
+      ? std::addressof(internal::Get<I>(polly::in_place_index_t<I>, *p));
+      : nullptr;
 }
 
 template <typename std::size_t I, typename... Types>
 constexpr add_pointer_t<variant_alternative_t<I, const variant<Types...>>>
     get_if(const variant<Types...>* p) noexcept {
-
+  return p != nullptr && p->index() == I
+      ? std::addressof(internal::Get<I>(polly::in_place_index_t<I>, *p));
+      : nullptr;
 }
 
 template <typename Tp, typename... Types>
 constexpr add_pointer_t<Tp> get_if(variant<Types...>* p) noexcept {
-  return get_if<variant_internal::index_of<Tp, variant<Types...>>::value>(p);
+  return get_if<variant_internal::IndexOf<Tp, variant<Types...>>::value>(p);
 }
 
 template <typename Tp, typename... Types>
 constexpr add_pointer_t<const Tp> get_if(const variant<Types...>* p) noexcept {
-  return get_if<variant_internal::index_of<Tp, variant<Types...>>::value>(p);
+  return get_if<variant_internal::IndexOf<Tp, variant<Types...>>::value>(p);
 }
 
 // compares operator
@@ -208,9 +212,8 @@ void swap(variant<Types...>& lhs, variant<Types...>& rhs) noexcept {
 // variant
 // The class template variant represents a type-safe union. An instance of
 // variant at any given time either holds a value of one of it's alternative
-// types or in the case of error, no value.
-// As variant is not permitted to hold reference, arrays or the type void.
-// Empty variants are also ill-formed.
+// types or in the case of error, no value. As variant is not permitted to
+// hold reference, arrays or the type void. Empty variants are also ill-formed.
 // A variant is permitted to hold the same type more than once and to hold
 // differently cv-qualified versions of the same type.
 template <typename... Types>
