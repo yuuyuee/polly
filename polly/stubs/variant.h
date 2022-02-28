@@ -73,11 +73,7 @@ public:
 
 // Non-member functions
 
-// visit
-// Calls
-// TODO
-
-// holds_alternative
+// holds_alternative()
 // Checks if the variant holds the alternative type. The call is ill-formed
 // if type does not appear exactly once in types.
 template <typename Tp, typename... Types>
@@ -89,7 +85,7 @@ constexpr bool holds_alternative(const variant<Types...>& v) noexcept {
   return v.index() == variant_internal::IndexOf<Tp, variant<Types...>>::value;
 }
 
-// get
+// get()
 // Reads the value of the variant given the index or the unique alternative  type.
 // Attempting to get value using a type that is not unique within the variant set
 // of alternative types is a compile-time error. If the index of the alternative
@@ -155,7 +151,7 @@ constexpr const Tp&& get(const variant<const Types...>&& v) {
   return get<variant_internal::IndexOf<Tp, variant<Types...>>::value>(std::move(v));
 }
 
-// get_if
+// get_if()
 // Obtains a pointer to the value of a pointed to variant given the index or
 // the type, return null on error.
 template <typename std::size_t I, typename... Types>
@@ -183,6 +179,25 @@ template <typename Tp, typename... Types>
 constexpr add_pointer_t<const Tp> get_if(const variant<Types...>* p) noexcept {
   return get_if<variant_internal::IndexOf<Tp, variant<Types...>>::value>(p);
 }
+
+// visit()
+// Calls a provided functor on a given set of variants. The functor must
+// return the same type when called with any of the variant alternatives.
+// Applies the visitor to the variants Equivalent as:
+//  std::invoke(std::forward<Visitor>(vis), std::get<is>(std::forward<Variant>(vars)...))
+//  where is... is vars.index()...
+
+// The return type is deduced from the returned expression as if by decltype.
+// The call is ill-formed if the invocation above is not a valid expresion
+// of the same type and value category, for all combinations of alternative
+// type of all variants.
+template <typename Visitor, typename... Variants>
+constexpr visit(Visitor&& vis, Variants&&... vars);
+
+// The return type is R, if R is (possibly cv-qualified) void, the result of
+// the invoke expression is discarded.
+template <typename R, typename Visitor, typename... Variants>
+constexpr R visit(Visitor&& vis, Variants&&... vars);
 
 // compares operator
 template <typename... Types>

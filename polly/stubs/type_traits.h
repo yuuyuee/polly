@@ -56,6 +56,20 @@ using remove_cvref_t = typename remove_cvref<Tp>::type;
 template <typename Tp>
 using add_pointer_t = typename std::add_pointer<Tp>::type;
 
+template <typename Tp>
+struct is_reference_wrapper: public std::false_type {};
+
+template <typename Tp>
+struct is_reference_wrapper<std::reference_wrapper<Tp>>
+    : public std::true_type {};
+
+template <typename Tp>
+struct is_function
+    : public std::integral_constant<
+        bool,
+        !(std::is_reference<Tp>::value ||
+          std::is_const<typename std::add_const<Tp>::type>::value)> {};
+
 namespace type_traits_internal {
 template <typename Tp>
 union SingleMemberUnion {
@@ -287,5 +301,6 @@ using make_index_sequence = make_integer_sequence<std::size_t, Num>;
 
 template <typename... Types>
 using index_sequence_for = make_index_sequence<sizeof...(Types)>;
+
 
 } // namespace polly
