@@ -11,8 +11,10 @@ namespace polly {
 using std::in_place_t;
 using std::in_place;
 #else // POLLY_HAVE_STD_OPTIONAL
-struct in_place_t {};
-POLLY_INLINE_CONSTEXPR(in_place_t, in_place,);
+struct in_place_t {
+  explicit in_place_t() = default;
+};
+POLLY_INLINE_CONSTEXPR(polly::in_place_t, in_place, {});
 #endif // POLLY_HAVE_STD_OPTIONAL
 
 #if defined(POLLY_HAVE_STD_ANY) || defined(POLLY_HAVE_STD_VARIANT)

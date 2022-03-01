@@ -1,8 +1,6 @@
 #pragma once
 
 #include "stubs/internal/config.h"
-
-#include <functional>
 #include <utility>
 #include "stubs/type_traits.h"
 
@@ -137,7 +135,7 @@ struct Callable {
 // Resolves to the first matching clause.
 template <typename... Args>
 struct Invoker {
-  typedef typename std::conditional<
+  using type = typename std::conditional<
       MemFunAndRef::Accept<Args...>::value,
       MemFunAndRef,
       typename std::conditional<
@@ -153,7 +151,7 @@ struct Invoker {
               >::type
           >::type
       >::type
-  >::type type;
+  >::type;
 };
 
 // The result type of Invoke<F, Args...>.

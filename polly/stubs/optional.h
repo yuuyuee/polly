@@ -51,16 +51,16 @@ class bad_optional_access : public std::exception {
 // optional has a constructor with nullopt_t as a single argument, which create
 // an optional that does not contain a value.
 struct nullopt_t {
-  struct construct_tag {};
+  struct tag {};
 
   // constructor must be a non-aggregate literal type and cannot have a default
   // constructor or an initializer-list constructor. It must have a constexpr
   // constructor that takes a optional_internal::construct_tag.
-  explicit constexpr nullopt_t(nullopt_t::construct_tag) {}
+  explicit constexpr nullopt_t(nullopt_t::tag) {}
 };
 
 // nullopt
-POLLY_INLINE_CONSTEXPR(nullopt_t, nullopt, nullopt_t::construct_tag{});
+POLLY_INLINE_CONSTEXPR(polly::nullopt_t, nullopt, {::polly::nullopt_t::tag{}});
 
 // class optional
 // The class template optional manages an optional contained value, a value
@@ -106,13 +106,13 @@ public:
   // following conditions are met:
   // std::is_constructible<Tp, Args...>::value is true.
   template <typename... Args,
-      Requires<std::is_constructible<Tp, Args...>> = true>
+      Requires<std::is_constructible<Tp, Args&&...>> = true>
   constexpr explicit optional(in_place_t, Args&&... args)
       noexcept(std::is_nothrow_constructible<Tp, Args...>::value)
       : optional_internal::OptionalBase<Tp>(in_place, std::forward<Args>(args)...) {}
 
   template <typename Up, typename... Args,
-      Requires<std::is_constructible<Tp, std::initializer_list<Up>&, Args...>> = true>
+      Requires<std::is_constructible<Tp, std::initializer_list<Up>&, Args&&...>> = true>
   constexpr explicit optional(in_place_t, std::initializer_list<Up> il, Args&&... args)
       noexcept(std::is_nothrow_constructible<Tp, std::initializer_list<Up>&, Args...>::value)
       : optional_internal::OptionalBase<Tp>(in_place, il, std::forward<Args>(args)...) {}
@@ -218,7 +218,7 @@ public:
   // Value constructor implicit.
   template <typename Up = Tp,
       Requires<
-          optional_internal::NotSelf<Up, optional>,
+          optional_internal::NotSelf<Up, optional<Tp>>,
           optional_internal::NotInPlaceTag<Up>,
           std::is_constructible<Tp, Up&&>,
           std::is_convertible<Up&&, Tp>> = true>
@@ -229,7 +229,7 @@ public:
   // Value constructor explicit.
   template <typename Up = Tp,
       Requires<
-          optional_internal::NotSelf<Up, optional>,
+          optional_internal::NotSelf<Up, optional<Tp>>,
           optional_internal::NotInPlaceTag<Up>,
           std::is_constructible<Tp, Up&&>,
           negation<std::is_convertible<Up&&, Tp>>> = true>
@@ -264,7 +264,7 @@ public:
 
   template <typename Up = Tp,
       Requires<
-          optional_internal::NotSelf<Up, optional>,
+          optional_internal::NotSelf<Up, optional<Tp>>,
           std::is_constructible<Tp, Up>,
           std::is_assignable<Tp&, Up>,
           negation<

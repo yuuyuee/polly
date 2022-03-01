@@ -27,6 +27,7 @@ using std::visit;
 #include <exception>
 #include <initializer_list>
 
+#include "stubs/internal/variant.h"
 #include "stubs/macros.h"
 #include "stubs/type_traits.h"
 #include "stubs/utility.h"
@@ -192,7 +193,10 @@ constexpr add_pointer_t<const Tp> get_if(const variant<Types...>* p) noexcept {
 // of the same type and value category, for all combinations of alternative
 // type of all variants.
 template <typename Visitor, typename... Variants>
-constexpr visit(Visitor&& vis, Variants&&... vars);
+variant_internal::VisitResultType<Visitor, Variants...>
+visit(Visitor&& vis, Variants&&... vars) {
+
+}
 
 // The return type is R, if R is (possibly cv-qualified) void, the result of
 // the invoke expression is discarded.

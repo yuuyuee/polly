@@ -13,8 +13,20 @@
 # define POLLY_INLINE_CONSTEXPR(type_, name, init) \
   inline constexpr ::polly::macros_internal::identity_t<type_> name = init
 #else // __cpp_inline_variables
-# define POLLY_INLINE_CONSTEXPR(type_, name, init) \
-  static constexpr ::polly::macros_internal::identity_t<type_> name{init}
+# define POLLY_INLINE_CONSTEXPR(type_, name, init)                              \
+  /* static constexpr ::polly::macros_internal::identity_t<type_> name{init} */ \
+  template <typename = void>                                                    \
+  struct PollyInternalInlineVariableHolder_ ## name {                           \
+    static constexpr ::polly::macros_internal::identity_t<type_>                \
+        kInstance = init; \
+  };                                                                            \
+  template <typename Tp>                                                        \
+  constexpr ::polly::macros_internal::identity_t<type_>                         \
+      PollyInternalInlineVariableHolder_ ## name<Tp>::kInstance;                \
+  static constexpr const ::polly::macros_internal::identity_t<type_>&           \
+      name = PollyInternalInlineVariableHolder_ ## name<>::kInstance;           \
+  static_assert(sizeof(void(*)(decltype(name))) != 0,                           \
+                "Silence unused variable warnings.");
 #endif // __cpp_inline_variables
 
 namespace polly {

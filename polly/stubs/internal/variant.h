@@ -2,9 +2,10 @@
 
 #include "stubs/internal/config.h"
 
+#include "stubs/internal/enable_special_members.h"
+#include "stubs/invoke.h"
 #include "stubs/type_traits.h"
 #include "stubs/utility.h"
-#include "stubs/internal/enable_special_members.h"
 
 namespace polly {
 template <typename...>
@@ -120,53 +121,53 @@ struct Traits {
 
   struct is_copy_ctor {
     static constexpr bool value =
-        polly::conjunction<std::is_copy_constructible<Types>...>::value;
+        conjunction<std::is_copy_constructible<Types>...>::value;
   };
 
   struct is_move_ctor {
     static constexpr bool value =
-        polly::conjunction<std::is_move_constructible<Types>...>::value;
+        conjunction<std::is_move_constructible<Types>...>::value;
   };
 
   struct is_copy_assign {
     static constexpr bool value =
         Traits<Types...>::is_copy_ctor::value &&
-        polly::conjunction<std::is_copy_assignable<Types>...>::value;
+        conjunction<std::is_copy_assignable<Types>...>::value;
   };
 
   struct is_move_assign {
     static constexpr bool value =
         Traits<Types...>::is_move_ctor::value &&
-        polly::conjunction<std::is_move_assignable<Types>...>::value;
+        conjunction<std::is_move_assignable<Types>...>::value;
   };
 
   struct is_trivial_dtor {
     static constexpr bool value =
-        polly::conjunction<std::is_trivially_destructible<Types>...>::value;
+        conjunction<std::is_trivially_destructible<Types>...>::value;
   };
 
   struct is_trivial_copy_ctor {
     static constexpr bool value =
-        polly::conjunction<polly::is_trivially_copy_constructible<Types>...>::value;
+        conjunction<is_trivially_copy_constructible<Types>...>::value;
   };
 
   struct is_trivial_move_ctor {
     static constexpr bool value =
-        polly::conjunction<polly::is_trivially_move_constructible<Types>...>::value;
+        conjunction<is_trivially_move_constructible<Types>...>::value;
   };
 
   struct is_trivial_copy_assign {
     static constexpr bool value =
         Traits<Types...>::is_trivial_dtor::value &&
         Traits<Types...>::is_trivial_copy_ctor::value &&
-        polly::conjunction<polly::is_trivially_copy_assignable<Types>...>::value;
+        conjunction<is_trivially_copy_assignable<Types>...>::value;
   };
 
   struct is_trivial_move_assign {
     static constexpr bool value =
         Traits<Types...>::is_trivial_dtor::value &&
         Traits<Types...>::is_trivial_move_ctor::value &&
-        polly::conjunction<polly::is_trivially_move_assignable<Types>...>::value;
+        conjunction<is_trivially_move_assignable<Types>...>::value;
   };
 
   struct is_nothrow_default_ctor {
@@ -182,7 +183,7 @@ struct Traits {
 
   struct is_nothrow_move_ctor {
     static constexpr bool value =
-        polly::conjunction<std::is_nothrow_move_constructible<Types>...>::value;
+        conjunction<std::is_nothrow_move_constructible<Types>...>::value;
   };
 
   struct is_nothrow_copy_assign {
@@ -192,7 +193,7 @@ struct Traits {
   struct is_nothrow_move_assign {
     static constexpr bool value =
         Traits<Types...>::is_nothrow_move_ctor::value &&
-        polly::conjunction<polly::is_trivially_move_assignable<Types>...>::value;
+        conjunction<is_trivially_move_assignable<Types>...>::value;
   };
 };
 
@@ -209,18 +210,17 @@ template <
     std::size_t I,
     typename Tp,
     typename Ti,
-    bool Ti_is_cv_bool = std::is_same<typename std::remove_cv<Ti>::type, bool>,
+    bool Ti_is_cv_bool = std::is_same<remove_cv_t<Ti>, bool>::value,
     typename = void>
 struct BuildFun {
   // This function means `using BuildFun<I, Tp, Ti>::Fn` is valid,
   // but only static functions will be considered in the call below.
   void Fn();
-}
+};
 
 // For which Ti x[] = {std::forward<Tp>(t)}
 template <std::size_t I, typename Tp, typename Ti>
-struct BuildFun<I, Tp, Ti, false,
-    polly::void_t<ConvertCtorType<Ti, Tp>> {
+struct BuildFun<I, Tp, Ti, false, void_t<ConvertCtorType<Ti, Tp>>> {
   // Fn is function for type Ti with index I
   static SizeType<I> Fn(Ti);
 };
@@ -228,49 +228,52 @@ struct BuildFun<I, Tp, Ti, false,
 // For which Ti is cv bool, remove_cvref_t<Tp> is bool
 template <std::size_t I, typename Tp, typename Ti>
 struct BuildFun<I, Tp, Ti, true,
-    enable_if_t<std::is_same<polly::remove_cvref_t<Tp>, bool>::value> {
+    enable_if_t<std::is_same<remove_cvref_t<Tp>, bool>::value>> {
   static SizeType<I> Fn(Ti);
 };
 
-tempate <typename Tp, typename Variant,
-    typename = polly::make_index_sequence<variant_size<Variant>::value>>
+template <
+    typename Tp,
+    typename Variant,
+    typename = typename make_index_sequence<
+        variant_size<Variant>::value>::type>
 struct BuildFuns;
 
 template <typename Tp, typename... Ti, std::size_t... I>
-struct BuildFuns<Tp, variant<Ti...>, polly::index_sequence<I...>>
-    public BuildFun<I, Tp, Ti>... {
-  using BuildFun<I, Tp, Ti>::Fn;
+struct BuildFuns<Tp, variant<Ti...>, index_sequence<I...>>
+    : BuildFun<I, Tp, Ti>... {
+  using BuildFun<I, Tp, Ti>::Fn...;
 };
 
-tmeplate <typename Tp, typename Variant>
+template <typename Tp, typename Variant>
 using FunType = decltype(BuildFuns<Tp, Variant>::Fn(std::declval<Tp>()));
 
 template <typename Tp, typename Variant, typename = void>
 struct IndexOfCtorType: public SizeType<variant_npos> {};
 
 template <typename Tp, typename Variant,
-    typename = polly::void_t<FunType<Tp, Variant>>>
+    typename = void_t<FunType<Tp, Variant>>>
 struct IndexOfCtorType: public FunType<Tp, Variant> {};
 
 template <std::size_t I, typename Variant>
 struct VariantAccessResultTypeImpl;
 
-template <std::size_t I, tmeplate <typename...> class VariantTemplate, typename... Types>
+template <std::size_t I, template <typename...> class VariantTemplate, typename... Types>
 struct VariantAccessResultTypeImpl<I, VariantTemplate<Types...>&> {
   using type = variant_alternative_t<I, variant<Types...>>&;
 };
 
-template <std::size_t I, tmeplate <typename...> class VariantTemplate, typename... Types>
+template <std::size_t I, template <typename...> class VariantTemplate, typename... Types>
 struct VariantAccessResultTypeImpl<I, const VariantTemplate<Types...>&> {
   using type = const variant_alternative_t<I, variant<Types...>>&;
 };
 
-template <std::size_t I, tmeplate <typename...> class VariantTemplate, typename... Types>
+template <std::size_t I, template <typename...> class VariantTemplate, typename... Types>
 struct VariantAccessResultTypeImpl<I, VariantTemplate<Types...>&&> {
   using type = variant_alternative_t<I, variant<Types...>>&&;
 };
 
-template <std::size_t I, tmeplate <typename...> class VariantTemplate, typename... Types>
+template <std::size_t I, template <typename...> class VariantTemplate, typename... Types>
 struct VariantAccessResultTypeImpl<I, const VariantTemplate<Types...>&&> {
   using type = const variant_alternative_t<I, variant<Types...>>&&;
 };
@@ -279,13 +282,21 @@ template <std::size_t I, typename Variant>
 using VariantAccessResultType =
     typename VariantAccessResultTypeImpl<I, Variant&&>::type;
 
+template <typename Visitor, typename... Variants>
+using VisitResultType =
+    polly::invoke_result_t<Visitor,
+                           VariantAccessResultType<0, Variants>...>;
+
 // class TrivialDestructibleObject
 // Uninitialized<T> is guaranteed to be a trivially destructible type
 // even if Tp is not.
-template <typename Tp, bool = polly::is_trivially_destructible<Tp>::value>
-struct TrivialDestructibleObject {
+template <typename Tp, bool = is_trivially_destructible<Tp>::value>
+struct TrivialDestructibleObject;
+
+template <typename Tp>
+struct TrivialDestructibleObject<Tp, false> {
   template <typename... Args>
-  TrivialDestructibleObject(polly::in_place_index_t<0>, Args&&... args) {
+  TrivialDestructibleObject(in_place_index_t<0>, Args&&... args) {
     ::new (reinterpret_cast<void*>(std::addressof(&storage)))
         Tp(std::forward<Args>(args)...);
   }
@@ -360,7 +371,7 @@ Get(in_place_index_t<0>, Up&& u) noexcept {
   return std::forward<Up>(u).first.Get();
 }
 
-template <std::size_t I, typpename Up>
+template <std::size_t I, typename Up>
 VariantAccessResultType<I, Up>
 Get(polly::in_place_index_t<I>, Up&& u) noexcept {
   return Get(polly::in_place_index_t<I - 1>, std::forward<Up>(u).last);
@@ -423,11 +434,14 @@ template <typename... Types>
 using VariantStorage =
     VariantStorageImpl<Traits<Types...>::is_trivial_dtor::value, Types...>;
 
-template <std::size_t I, typpename Variant>
+template <std::size_t I, typename Variant>
 VariantAccessResultType<I, Variant>
 Get(polly::in_place_index_t<I>, Variant&& v) noexcept {
   return Get(polly::in_place_index_t<I>, std::forward<Variant>(v).state);
 }
+
+// visit helper
+
 
 template <bool /* trivial copy ctor */, typename... Types>
 struct CopyConstructorBase: public VariantStorage<Types...> {
@@ -471,7 +485,8 @@ struct MoveConstructorBase: public CopyConstructorBaseType<Types...> {
 };
 
 template <typename... Types>
-struct MoveConstructorBase<true, Types...>: public CopyConstructorBaseType<Types...> {
+struct MoveConstructorBase<true, Types...>
+    : public CopyConstructorBaseType<Types...> {
   using Base = CopyConstructorBaseType<Types...>;
   using Base::Base;
 
@@ -480,7 +495,8 @@ struct MoveConstructorBase<true, Types...>: public CopyConstructorBaseType<Types
 
 template <typename... Types>
 using MoveConstructorBaseType =
-    MoveConstructorBase<Traits<Types...>::is_trivial_move_ctor::value, Types...>;
+    MoveConstructorBase<Traits<Types...>::is_trivial_move_ctor::value,
+                        Types...>;
 
 template <bool /* trivial copy assign */, typename... Types>
 struct CopyAssignBase: public MoveConstructorBaseType<Types...> {
@@ -498,7 +514,8 @@ struct CopyAssignBase: public MoveConstructorBaseType<Types...> {
 };
 
 template <typename... Types>
-struct CopyAssignBase<true, Types...>: public MoveConstructorBaseType<Types...> {
+struct CopyAssignBase<true, Types...>
+    : public MoveConstructorBaseType<Types...> {
   using Base = MoveConstructorBaseType<Types...>;
   using Base::Base;
 };
@@ -549,7 +566,7 @@ struct VariantBase: public MoveAssignBaseType<Tyeps...> {
   VariantBase& operator=(const VariantBase&) = default;
   VariantBase& operator=(VariantBase&&) = default;
 };
-ss
+
 template <typename... Types>
 using VariantEnableDefaultConstructor =
     polly::enable_default_constructor<
@@ -580,7 +597,7 @@ using NotInPlaceTag = NotInPlaceTagImpl<polly::remove_cvref_t<Tp>>;
 template <typename Tp, typename Variant>
 using NotSelf = polly::negation<std::is_same<Variant, polly::remove_cvref_t<Tp>>>;
 
-// get helper
+
 
 } // namespace variant_internal
 

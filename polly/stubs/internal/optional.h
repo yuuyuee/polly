@@ -25,8 +25,8 @@ public:
   ~OptionalDataBase() = default;
 
   template<typename... Args>
-  constexpr explicit OptionalDataBase(in_place_t tag, Args&&... args)
-      :  payload_(tag, std::forward<Args>(args)...), engaged_(true) {}
+  constexpr explicit OptionalDataBase(in_place_t, Args&&... args)
+      :  payload_(in_place, std::forward<Args>(args)...), engaged_(true) {}
 
   template<typename Up, typename... Args>
   constexpr explicit OptionalDataBase(
@@ -428,8 +428,8 @@ using OptionalEnableCopyMove =
         std::is_move_assignable<Tp>::value,
         Tag>;
 
-template <typename Tp, typename Optioinal>
-using NotSelf = negation<std::is_same<Optioinal, remove_cvref_t<Tp>>>;
+template <typename Tp, typename Optional>
+using NotSelf = negation<std::is_same<Optional, remove_cvref_t<Tp>>>;
 
 template <typename Tp>
 using NotInPlaceTag = negation<std::is_same<in_place_t, remove_cvref_t<Tp>>>;

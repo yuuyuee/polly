@@ -10,42 +10,48 @@ template <typename...>
 struct disjunction;
 
 template <>
-struct disjunction<>: public std::false_type {};
+struct disjunction<>: std::false_type {};
 
 template <typename T1>
-struct disjunction<T1>: public T1 {};
+struct disjunction<T1>: T1 {};
 
 template <typename T1, typename T2>
-struct disjunction<T1, T2>: public std::conditional<T1::value, T1, T2>::type {};
+struct disjunction<T1, T2>: std::conditional<T1::value, T1, T2>::type {};
 
 template <typename T1, typename T2, typename T3, typename... Tn>
 struct disjunction<T1, T2, T3, Tn...>
-    : public std::conditional<T1::value, T1, disjunction<T2, T3, Tn...>>::type {};
+    : std::conditional<T1::value, T1, disjunction<T2, T3, Tn...>>::type {};
 
 template <typename...>
 struct conjunction;
 
 template <>
-struct conjunction<>: public std::true_type {};
+struct conjunction<>: std::true_type {};
 
 template <typename T1>
-struct conjunction<T1>: public T1 {};
+struct conjunction<T1>: T1 {};
 
 template <typename T1, typename T2>
-struct conjunction<T1, T2>: public std::conditional<T1::value, T2, T1>::type {};
+struct conjunction<T1, T2>: std::conditional<T1::value, T2, T1>::type {};
 
 template <typename T1, typename T2, typename T3, typename... Tn>
 struct conjunction<T1, T2, T3, Tn...>
-    : public std::conditional<T1::value, conjunction<T2, T3, Tn...>, T1>::type {};
+    : std::conditional<T1::value, conjunction<T2, T3, Tn...>, T1>::type {};
 
 template <typename Tp>
-struct negation: public std::integral_constant<bool, !Tp::value> {};
+struct negation: std::integral_constant<bool, !Tp::value> {};
 
 template <bool Value, typename Tp = void>
 using enable_if_t = typename std::enable_if<Value, Tp>::type;
 
+template <typename Tp>
+using decay_t = typename std::decay<Tp>::type;
+
 template <typename... Tn>
 using Requires = enable_if_t<conjunction<Tn...>::value, bool>;
+
+template <typename Tp>
+using remove_cv_t = typename std::remove_cv<Tp>::type;
 
 template <typename Tp>
 using remove_cvref = std::remove_cv<typename std::remove_reference<Tp>::type>;
@@ -57,18 +63,173 @@ template <typename Tp>
 using add_pointer_t = typename std::add_pointer<Tp>::type;
 
 template <typename Tp>
-struct is_reference_wrapper: public std::false_type {};
+struct is_reference_wrapper: std::false_type {};
 
 template <typename Tp>
-struct is_reference_wrapper<std::reference_wrapper<Tp>>
-    : public std::true_type {};
+struct is_reference_wrapper<std::reference_wrapper<Tp>>: std::true_type {};
 
+#if 1
+template <typename>
+struct is_function: std::false_type {};
+
+// Specialization for regular functions
+template <typename R, typename... Args>
+struct is_function<R(Args...)>: std::true_type {};
+
+// Specialization for variadic functions such as printf
+template <typename R, typename... Args>
+struct is_function<R(Args......)>: std::true_type {};
+
+// Specialization for function types that have cv-qualifiers
+template <typename R, typename... Args>
+struct is_function<R(Args...) const>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) volatile>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const volatile>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) volatile>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const volatile>: std::true_type {};
+
+// Specialization for function types that have ref-qualifiers
+template <typename R, typename... Args>
+struct is_function<R(Args...) &>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) volatile&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const volatile&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) &>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) volatile&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const volatile&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) &&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const&&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) volatile&&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const volatile&&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) &&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const&&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) volatile&&>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const volatile&&>: std::true_type {};
+
+#if __cplusplus >= 2017003L
+// Specialization for noexcept version of all the above in the C++17 and later.
+template <typename R, typename... Args>
+struct is_function<R(Args...) noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) volatile noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const volatile noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) volatile noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const volatile noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) & noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) volatile& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const volatile& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) & noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) volatile& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const volatile& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) && noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const&& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) volatile&& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args...) const volatile&& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) && noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const&& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) volatile&& noexcept>: std::true_type {};
+
+template <typename R, typename... Args>
+struct is_function<R(Args......) const volatile&& noexcept>: std::true_type {};
+#endif // __cplusplus >= 201703L
+#else
 template <typename Tp>
 struct is_function
-    : public std::integral_constant<
+    : std::integral_constant<
         bool,
         !(std::is_reference<Tp>::value ||
           std::is_const<typename std::add_const<Tp>::type>::value)> {};
+#endif
 
 namespace type_traits_internal {
 template <typename Tp>
@@ -235,8 +396,8 @@ struct is_nothrow_swappable_helper {
 } // namespace type_traits_internal
 
 template <typename Tp>
-struct is_swappable:
-    public type_traits_internal::is_swappable_helper<Tp>::type {};
+struct is_swappable
+    : type_traits_internal::is_swappable_helper<Tp>::type {};
 
 // Some standard library implementations are broken in that they do not
 // constrain `std::swap`. This will effectively tell us if we are dealing
@@ -244,8 +405,8 @@ struct is_swappable:
 using StdSwapIsUnconstrained = is_swappable<void()>;
 
 template <typename Tp>
-struct is_nothrow_swappable:
-    public type_traits_internal::is_nothrow_swappable_helper<Tp>::type {};
+struct is_nothrow_swappable
+    : type_traits_internal::is_nothrow_swappable_helper<Tp>::type {};
 
 // integer_sequence
 // The class template integer_sequence represents a compile-time sequence

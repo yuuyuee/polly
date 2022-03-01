@@ -73,6 +73,23 @@ TEST(NotTest, BasicBooleanLogic) {
   EXPECT_TRUE(polly::negation<FalseType>::value);
 }
 
+TEST(TypeTraitsTest, TestIsFunction) {
+  struct Callable {
+    void operator()() {}
+  };
+
+  EXPECT_TRUE(polly::is_function<void()>::value);
+  EXPECT_TRUE(polly::is_function<void() &>::value);
+  EXPECT_TRUE(polly::is_function<void() const>::value);
+  EXPECT_TRUE(polly::is_function<void() noexcept>::value);
+  EXPECT_TRUE(polly::is_function<void(...)>::value);
+
+  EXPECT_FALSE(polly::is_function<void(*)()>::value);
+  EXPECT_FALSE(polly::is_function<void(&)()>::value);
+  EXPECT_FALSE(polly::is_function<int>::value);
+  EXPECT_FALSE(polly::is_function<Callable>::value);
+}
+
 // all member functions are trivial
 class Trivial {
   int n_;
