@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #if defined(POLLY_HAVE_STD_ANY)
 #include <any>
@@ -16,10 +16,10 @@ using std::make_any;
 
 #include <initializer_list>
 
-#include "stubs/utility.h"
-#include "stubs/internal/any.h"
+#include "polly/stubs/utility.h"
+#include "polly/stubs/internal/any.h"
 #if !defined(POLLY_HAVE_EXCEPTIONS)
-#include "stubs/internal/raw_logging.h"
+#include "polly/stubs/internal/raw_logging.h"
 #endif
 
 namespace polly {

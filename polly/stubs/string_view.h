@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #if defined(POLLY_HAVE_STD_STRING_VIEW)
 #include <string_view>
@@ -17,10 +17,10 @@ using std::string_view;
 #include <limits>
 #include <ostream>
 
-#include "stubs/internal/throw_delegate.h"
-#include "stubs/internal/raw_logging.h"
-#include "stubs/hash.h"
-#include "stubs/macros.h"
+#include "polly/stubs/internal/throw_delegate.h"
+#include "polly/stubs/internal/raw_logging.h"
+#include "polly/stubs/hash.h"
+#include "polly/stubs/macros.h"
 
 namespace polly {
 // The class template basic_string_view describes an object that can refer to

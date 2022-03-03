@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #include <cassert>
 #include <cstdlib>

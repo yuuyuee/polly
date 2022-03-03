@@ -1,12 +1,12 @@
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #ifndef POLLY_HAVE_STD_OPTIONAL
 #include <vector>
 #include <initializer_list>
 
-#include "stubs/type_traits.h"
-#include "stubs/utility.h"
-#include "stubs/any.h"
+#include "polly/stubs/type_traits.h"
+#include "polly/stubs/utility.h"
+#include "polly/stubs/any.h"
 #include "gtest/gtest.h"
 
 namespace {
@@ -552,7 +552,7 @@ TEST(AnyTest, Reset) {
 }
 
 #ifdef POLLY_HAVE_EXCEPTIONS
-// If using the absl `any` implementation, we can rely on a specific message.
+// If using the `any` implementation, we can rely on a specific message.
 #define POLLY_ANY_TEST_EXPECT_BAD_ANY_CAST(expr) do {             \
   bool flags = false;                                             \
   try { expr; } catch (polly::bad_any_cast& e) { flags = true; }  \

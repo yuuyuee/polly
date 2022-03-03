@@ -1,15 +1,15 @@
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #ifndef POLLY_HAVE_STD_OPTIONAL
-#include "stubs/optional.h"
+#include "polly/stubs/optional.h"
 
 #include <string>
 #include <type_traits>
 #include <utility>
 
 #include "gtest/gtest.h"
-#include "stubs/type_traits.h"
-#include "stubs/string_view.h"
+#include "polly/stubs/type_traits.h"
+#include "polly/stubs/string_view.h"
 
 struct Hashable {};
 

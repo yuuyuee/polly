@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #include <type_traits>
 #include <utility>
@@ -451,7 +451,8 @@ struct make_integer_sequence<Tp, 0> {
 } // namespace type_traits_internal
 
 template <typename Tp, Tp Num>
-using make_integer_sequence = type_traits_internal::make_integer_sequence<Tp, Num>;
+using make_integer_sequence =
+        typename type_traits_internal::make_integer_sequence<Tp, Num>::type;
 #endif // POLLY_HAS_BUILTIN(__make_integer_seq)
 
 template <std::size_t... Idx>
@@ -463,5 +464,13 @@ using make_index_sequence = make_integer_sequence<std::size_t, Num>;
 template <typename... Types>
 using index_sequence_for = make_index_sequence<sizeof...(Types)>;
 
+// type_identity
+template <typename Tp>
+struct type_identity {
+  using type = Tp;
+};
+
+template <typename Tp>
+using type_identity_t = typename type_identity<Tp>::type;
 
 } // namespace polly

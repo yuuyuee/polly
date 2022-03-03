@@ -1,9 +1,9 @@
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #include <memory>
 #include <string>
 
-#include "stubs/invoke.h"
+#include "polly/stubs/invoke.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

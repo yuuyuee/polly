@@ -1,13 +1,13 @@
 #pragma once
 
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #include <functional>
 #include <initializer_list>
 
-#include "stubs/type_traits.h"
-#include "stubs/utility.h"
-#include "stubs/internal/enable_special_members.h"
+#include "polly/stubs/type_traits.h"
+#include "polly/stubs/utility.h"
+#include "polly/stubs/internal/enable_special_members.h"
 
 namespace polly {
 template <typename Tp>

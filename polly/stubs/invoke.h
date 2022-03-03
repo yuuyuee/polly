@@ -1,8 +1,8 @@
 #pragma once
 
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 #include <utility>
-#include "stubs/type_traits.h"
+#include "polly/stubs/type_traits.h"
 
 // polly::invoke(f, args...) is an implementation of INVOKE(f, args...)
 // from section [func.require] of the C++ standard.

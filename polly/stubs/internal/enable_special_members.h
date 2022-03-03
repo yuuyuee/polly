@@ -1,7 +1,7 @@
 #pragma once
 
-#include "stubs/internal/config.h"
-#include "stubs/type_traits.h"
+#include "polly/stubs/internal/config.h"
+#include "polly/stubs/type_traits.h"
 
 namespace polly {
 struct enable_default_constructors_tag {

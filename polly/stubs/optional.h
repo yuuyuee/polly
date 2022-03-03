@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #if defined(POLLY_HAVE_STD_OPTIONAL)
 #include <optional>
@@ -18,11 +18,12 @@ using std::in_place;
 
 #else // POLLY_HAVE_STD_OPTIONAL
 
-#include "stubs/macros.h"
+#include "polly/stubs/macros.h"
 #if !defined(POLLY_HAVE_EXCEPTIONS)
-#include "stubs/internal/raw_logging.h"
+#include "polly/stubs/internal/raw_logging.h"
 #endif
-#include "stubs/internal/optional.h"
+#include "polly/stubs/internal/optional.h"
+#include "polly/stubs/internal/inline_variable.h"
 
 namespace polly {
 // A type of object to thrown by std::optional::value when accessing an optional

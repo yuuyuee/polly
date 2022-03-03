@@ -1,10 +1,10 @@
 #pragma once
 
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #include <typeinfo>
-#include "stubs/type_traits.h"
-#include "stubs/utility.h"
+#include "polly/stubs/type_traits.h"
+#include "polly/stubs/utility.h"
 
 namespace polly {
 namespace any_internal {

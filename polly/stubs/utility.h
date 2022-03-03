@@ -1,9 +1,9 @@
 #pragma once
 
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #include <utility>
-#include "stubs/macros.h"
+#include "polly/stubs/macros.h"
 
 namespace polly {
 

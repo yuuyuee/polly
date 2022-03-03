@@ -1,4 +1,4 @@
-#include "stubs/internal/raw_logging.h"
+#include "polly/stubs/internal/raw_logging.h"
 
 #include <unistd.h>
 #include <cstdio>

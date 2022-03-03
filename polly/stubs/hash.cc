@@ -1,4 +1,4 @@
-#include "stubs/hash.h"
+#include "polly/stubs/hash.h"
 #include <cstring>
 
 namespace polly {

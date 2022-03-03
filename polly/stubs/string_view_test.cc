@@ -1,11 +1,11 @@
-#include "stubs/internal/config.h"
+#include "polly/stubs/internal/config.h"
 
 #ifndef POLLY_HAVE_STD_STRING_VIEW
-#include "stubs/string_view.h"
+#include "polly/stubs/string_view.h"
 
 #include <map>
 #include <stdexcept>
-#include "stubs/macros.h"
+#include "polly/stubs/macros.h"
 #include "gtest/gtest.h"
 
 TEST(StringViewTest, Ctor) {

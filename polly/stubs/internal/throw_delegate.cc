@@ -1,10 +1,10 @@
-#include "stubs/internal/throw_delegate.h"
+#include "polly/stubs/internal/throw_delegate.h"
 
 #include <cstdlib>
 #include <stdexcept>
 
 #if !defined(POLLY_HAVE_EXCEPTIONS)
-# include "stubs/internal/raw_logging.h"
+# include "polly/stubs/internal/raw_logging.h"
 #endif
 
 namespace polly {
