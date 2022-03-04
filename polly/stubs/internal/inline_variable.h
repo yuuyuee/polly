@@ -1,6 +1,6 @@
 #pragma once
 
-#include "polly/stubs/config.h"
+#include "polly/stubs/internal/config.h"
 
 #if !defined(POLLY_HAVE_INLINE_VARIABLES)
 #include "polly/stubs/type_traits.h"
@@ -25,7 +25,7 @@
         kInstance = init;                                               \
   };                                                                    \
   template <typename Tp>                                                \
-  constexpr ::polly::macros_internal::type_identity_t<type_>            \
+  constexpr ::polly::type_identity_t<type_>                             \
       PollyInternalInlineVariableHolder_ ## name<Tp>::kInstance;        \
   static constexpr const ::polly::type_identity_t<type_>&               \
       name = PollyInternalInlineVariableHolder_ ## name<>::kInstance;   \

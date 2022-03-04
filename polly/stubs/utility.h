@@ -3,7 +3,7 @@
 #include "polly/stubs/internal/config.h"
 
 #include <utility>
-#include "polly/stubs/macros.h"
+#include "polly/stubs/internal/inline_variable.h"
 
 namespace polly {
 

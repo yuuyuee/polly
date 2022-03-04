@@ -11,10 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-// Implementation details of polly/types/variant.h, pulled into a
-// separate file to avoid cluttering the top of the API header with
-// implementation details.
 
 #pragma once
 
@@ -22,14 +18,16 @@
 
 #include <memory>
 #include <tuple>
+#include <exception>
+#include <functional>
+#include <algorithm>
 
 #include "polly/stubs/internal/inline_variable.h"
+#include "polly/stubs/internal/raw_logging.h"
 #include "polly/stubs/invoke.h"
 #include "polly/stubs/macros.h"
 #include "polly/stubs/type_traits.h"
 #include "polly/stubs/utility.h"
-
-#if !defined(POLLY_HAVE_STD_VARIANT)
 
 namespace polly {
 template <class... Types>
@@ -42,6 +40,28 @@ struct variant_size;
 
 template <std::size_t I, class T>
 struct variant_alternative;
+
+// bad_variant_access
+// Exception thrown on invalid accesses to the value of a variant.
+class bad_variant_access: public std::exception {
+public:
+  bad_variant_access() noexcept = default;
+  virtual ~bad_variant_access() noexcept = default;
+
+  virtual const char* what() const noexcept override {
+    return "Bad variant access";
+  }
+};
+
+// Throw delegate
+[[noreturn]] inline void ThrowBadVariantAccess() {
+#ifndef POLLY_HAVE_EXCEPTIONS
+  POLLY_RAW_LOG(FATAL, bad_variant_access{}.what());
+#else
+  throw bad_variant_access{};
+#endif
+}
+
 
 namespace variant_internal {
 
@@ -126,29 +146,26 @@ struct VariantAccessResultImpl;
 
 template <std::size_t I, template <class...> class Variantemplate, class... T>
 struct VariantAccessResultImpl<I, Variantemplate<T...>&> {
-  using type = typename polly::variant_alternative<I, variant<T...>>::type&;
+  using type = typename variant_alternative<I, variant<T...>>::type&;
 };
 
 template <std::size_t I, template <class...> class Variantemplate, class... T>
 struct VariantAccessResultImpl<I, const Variantemplate<T...>&> {
-  using type =
-      const typename polly::variant_alternative<I, variant<T...>>::type&;
+  using type = const typename variant_alternative<I, variant<T...>>::type&;
 };
 
 template <std::size_t I, template <class...> class Variantemplate, class... T>
 struct VariantAccessResultImpl<I, Variantemplate<T...>&&> {
-  using type = typename polly::variant_alternative<I, variant<T...>>::type&&;
+  using type = typename variant_alternative<I, variant<T...>>::type&&;
 };
 
 template <std::size_t I, template <class...> class Variantemplate, class... T>
 struct VariantAccessResultImpl<I, const Variantemplate<T...>&&> {
-  using type =
-      const typename polly::variant_alternative<I, variant<T...>>::type&&;
+  using type = const typename variant_alternative<I, variant<T...>>::type&&;
 };
 
 template <std::size_t I, class Variant>
-using VariantAccessResult =
-    typename VariantAccessResultImpl<I, Variant&&>::type;
+using VariantAccessResult = typename VariantAccessResultImpl<I, Variant&&>::type;
 
 // NOTE: This is used instead of std::array to reduce instantiation overhead.
 template <class T, std::size_t Size>
@@ -188,7 +205,7 @@ using AlwaysZero = SizeT<0>;
 
 template <class Op, class... Vs>
 struct VisitIndicesResultImpl {
-  using type = polly::result_of_t<Op(AlwaysZero<Vs>...)>;
+  using type = result_of_t<Op(AlwaysZero<Vs>...)>;
 };
 
 template <class Op, class... Vs>
@@ -204,7 +221,7 @@ constexpr ReturnType call_with_indices(FunctionObject&& function) {
       std::is_same<ReturnType, decltype(std::declval<FunctionObject>()(
                                    SizeT<Indices>()...))>::value,
       "Not all visitation overloads have the same return type.");
-  return polly::forward<FunctionObject>(function)(SizeT<Indices>()...);
+  return std::forward<FunctionObject>(function)(SizeT<Indices>()...);
 }
 
 template <class ReturnType, class FunctionObject, std::size_t... BoundIndices>
@@ -255,24 +272,21 @@ struct MakeVisitationMatrix<ReturnType, FunctionObject,
                             index_sequence<BoundIndices...>>
     : MakeVisitationMatrixImpl<ReturnType, FunctionObject,
                                index_sequence<TailEndIndices...>,
-                               polly::make_index_sequence<HeadEndIndex>,
+                               make_index_sequence<HeadEndIndex>,
                                index_sequence<BoundIndices...>> {};
 
 struct UnreachableSwitchCase {
   template <class Op>
   [[noreturn]] static VisitIndicesResultT<Op, std::size_t> Run(
       Op&& /*ignored*/) {
-#if POLLY_HAS_BUILTIN(__builtin_unreachable) || \
-    (defined(__GNUC__) && !defined(__clang__))
-    __builtin_unreachable();
-#endif  // Checks for __builtin_unreachable
+    POLLY_RAW_LOG(FATAL, "Unreachable code");
   }
 };
 
 template <class Op, std::size_t I>
 struct ReachableSwitchCase {
   static VisitIndicesResultT<Op, std::size_t> Run(Op&& op) {
-    return polly::base_internal::invoke(polly::forward<Op>(op), SizeT<I>());
+    return invoke(std::forward<Op>(op), SizeT<I>());
   }
 };
 
@@ -281,7 +295,7 @@ struct ReachableSwitchCase {
 // power of 2 is because the number was picked to correspond to a power of 2
 // amount of "normal" alternatives, plus one for the possibility of the user
 // providing "monostate" in addition to the more natural alternatives.
-ABSL_INTERNAL_INLINE_CONSTEXPR(std::size_t, MaxUnrolledVisitCases, 33);
+POLLY_INLINE_CONSTEXPR(std::size_t, MaxUnrolledVisitCases, 33);
 
 // Note: The default-definition is for unreachable cases.
 template <bool IsReachable>
@@ -306,7 +320,7 @@ using PickCase = typename PickCaseImpl<(I < EndIndex)>::template Apply<Op, I>;
 
 template <class ReturnType>
 [[noreturn]] ReturnType TypedThrowBadVariantAccess() {
-  polly::variant_internal::ThrowBadVariantAccess();
+  ThrowBadVariantAccess();
 }
 
 // Given N variant sizes, determine the number of cases there would need to be
@@ -337,74 +351,74 @@ struct VisitIndicesSwitch {
   static VisitIndicesResultT<Op, std::size_t> Run(Op&& op, std::size_t i) {
     switch (i) {
       case 0:
-        return PickCase<Op, 0, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 0, EndIndex>::Run(std::forward<Op>(op));
       case 1:
-        return PickCase<Op, 1, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 1, EndIndex>::Run(std::forward<Op>(op));
       case 2:
-        return PickCase<Op, 2, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 2, EndIndex>::Run(std::forward<Op>(op));
       case 3:
-        return PickCase<Op, 3, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 3, EndIndex>::Run(std::forward<Op>(op));
       case 4:
-        return PickCase<Op, 4, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 4, EndIndex>::Run(std::forward<Op>(op));
       case 5:
-        return PickCase<Op, 5, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 5, EndIndex>::Run(std::forward<Op>(op));
       case 6:
-        return PickCase<Op, 6, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 6, EndIndex>::Run(std::forward<Op>(op));
       case 7:
-        return PickCase<Op, 7, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 7, EndIndex>::Run(std::forward<Op>(op));
       case 8:
-        return PickCase<Op, 8, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 8, EndIndex>::Run(std::forward<Op>(op));
       case 9:
-        return PickCase<Op, 9, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 9, EndIndex>::Run(std::forward<Op>(op));
       case 10:
-        return PickCase<Op, 10, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 10, EndIndex>::Run(std::forward<Op>(op));
       case 11:
-        return PickCase<Op, 11, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 11, EndIndex>::Run(std::forward<Op>(op));
       case 12:
-        return PickCase<Op, 12, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 12, EndIndex>::Run(std::forward<Op>(op));
       case 13:
-        return PickCase<Op, 13, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 13, EndIndex>::Run(std::forward<Op>(op));
       case 14:
-        return PickCase<Op, 14, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 14, EndIndex>::Run(std::forward<Op>(op));
       case 15:
-        return PickCase<Op, 15, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 15, EndIndex>::Run(std::forward<Op>(op));
       case 16:
-        return PickCase<Op, 16, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 16, EndIndex>::Run(std::forward<Op>(op));
       case 17:
-        return PickCase<Op, 17, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 17, EndIndex>::Run(std::forward<Op>(op));
       case 18:
-        return PickCase<Op, 18, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 18, EndIndex>::Run(std::forward<Op>(op));
       case 19:
-        return PickCase<Op, 19, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 19, EndIndex>::Run(std::forward<Op>(op));
       case 20:
-        return PickCase<Op, 20, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 20, EndIndex>::Run(std::forward<Op>(op));
       case 21:
-        return PickCase<Op, 21, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 21, EndIndex>::Run(std::forward<Op>(op));
       case 22:
-        return PickCase<Op, 22, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 22, EndIndex>::Run(std::forward<Op>(op));
       case 23:
-        return PickCase<Op, 23, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 23, EndIndex>::Run(std::forward<Op>(op));
       case 24:
-        return PickCase<Op, 24, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 24, EndIndex>::Run(std::forward<Op>(op));
       case 25:
-        return PickCase<Op, 25, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 25, EndIndex>::Run(std::forward<Op>(op));
       case 26:
-        return PickCase<Op, 26, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 26, EndIndex>::Run(std::forward<Op>(op));
       case 27:
-        return PickCase<Op, 27, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 27, EndIndex>::Run(std::forward<Op>(op));
       case 28:
-        return PickCase<Op, 28, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 28, EndIndex>::Run(std::forward<Op>(op));
       case 29:
-        return PickCase<Op, 29, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 29, EndIndex>::Run(std::forward<Op>(op));
       case 30:
-        return PickCase<Op, 30, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 30, EndIndex>::Run(std::forward<Op>(op));
       case 31:
-        return PickCase<Op, 31, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 31, EndIndex>::Run(std::forward<Op>(op));
       case 32:
-        return PickCase<Op, 32, EndIndex>::Run(polly::forward<Op>(op));
+        return PickCase<Op, 32, EndIndex>::Run(std::forward<Op>(op));
       default:
         POLLY_CONST_ASSERT(i == variant_npos);
-        return polly::invoke(polly::forward<Op>(op), NPos());
+        return invoke(std::forward<Op>(op), NPos());
     }
   }
 };
@@ -459,7 +473,7 @@ template <class IndexSequence, std::size_t... EndIndices>
 struct VisitIndicesVariadicImpl;
 
 template <std::size_t... N, std::size_t... EndIndices>
-struct VisitIndicesVariadicImpl<polly::index_sequence<N...>, EndIndices...> {
+struct VisitIndicesVariadicImpl<index_sequence<N...>, EndIndices...> {
   // A type that can take an N-ary function object and converts it to a unary
   // function object that takes a single, flattened index, and "unflattens" it
   // into its individual dimensions when forwarding to the wrapped object.
@@ -468,10 +482,9 @@ struct VisitIndicesVariadicImpl<polly::index_sequence<N...>, EndIndices...> {
     template <std::size_t I>
     VisitIndicesResultT<Op, decltype(EndIndices)...> operator()(
         SizeT<I> /*index*/) && {
-      return base_internal::invoke(
-          polly::forward<Op>(op),
-          SizeT<UnflattenIndex<I, N, (EndIndices + 1)...>::value -
-                std::size_t{1}>()...);
+      return invoke(
+          std::forward<Op>(op),
+          SizeT<UnflattenIndex<I, N, (EndIndices + 1)...>::value - std::size_t{1}>()...);
     }
 
     Op&& op;
@@ -481,7 +494,7 @@ struct VisitIndicesVariadicImpl<polly::index_sequence<N...>, EndIndices...> {
   static VisitIndicesResultT<Op, decltype(EndIndices)...> Run(
       Op&& op, SizeType... i) {
     return VisitIndicesSwitch<NumCasesOfSwitch<EndIndices...>::value>::Run(
-        FlattenedOp<Op>{polly::forward<Op>(op)},
+        FlattenedOp<Op>{std::forward<Op>(op)},
         FlattenIndices<(EndIndices + std::size_t{1})...>::Run(
             (i + std::size_t{1})...));
   }
@@ -489,7 +502,7 @@ struct VisitIndicesVariadicImpl<polly::index_sequence<N...>, EndIndices...> {
 
 template <std::size_t... EndIndices>
 struct VisitIndicesVariadic
-    : VisitIndicesVariadicImpl<polly::make_index_sequence<sizeof...(EndIndices)>,
+    : VisitIndicesVariadicImpl<make_index_sequence<sizeof...(EndIndices)>,
                                EndIndices...> {};
 
 // This implementation will flatten N-ary visit operations into a single switch
@@ -502,36 +515,21 @@ struct VisitIndicesVariadic
 //   size.
 template <std::size_t... EndIndices>
 struct VisitIndices
-    : polly::conditional_t<(NumCasesOfSwitch<EndIndices...>::value <=
-                           MaxUnrolledVisitCases),
-                          VisitIndicesVariadic<EndIndices...>,
-                          VisitIndicesFallback<EndIndices...>> {};
+    : conditional_t<(NumCasesOfSwitch<EndIndices...>::value <=
+                     MaxUnrolledVisitCases),
+                     VisitIndicesVariadic<EndIndices...>,
+                     VisitIndicesFallback<EndIndices...>> {};
 
 template <std::size_t EndIndex>
 struct VisitIndices<EndIndex>
-    : polly::conditional_t<(EndIndex <= MaxUnrolledVisitCases),
-                          VisitIndicesSwitch<EndIndex>,
-                          VisitIndicesFallback<EndIndex>> {};
+    : conditional_t<(EndIndex <= MaxUnrolledVisitCases),
+                     VisitIndicesSwitch<EndIndex>,
+                     VisitIndicesFallback<EndIndex>> {};
 
-// Suppress bogus warning on MSVC: MSVC complains that the `reinterpret_cast`
-// below is returning the address of a temporary or local object.
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4172)
-#endif  // _MSC_VER
-
-// TODO(calabrese) std::launder
-// TODO(calabrese) constexpr
-// NOTE: DO NOT REMOVE the `inline` keyword as it is necessary to work around a
-// MSVC bug. See https://github.com/abseil/abseil-cpp/issues/129 for details.
 template <class Self, std::size_t I>
 inline VariantAccessResult<I, Self> AccessUnion(Self&& self, SizeT<I> /*i*/) {
   return reinterpret_cast<VariantAccessResult<I, Self>>(self);
 }
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif  // _MSC_VER
 
 template <class T>
 void DeducedDestroy(T& self) {  // NOLINT
@@ -557,7 +555,7 @@ struct VariantCoreAccess {
   template <class VariantType>
   static void Destroy(VariantType& self) {  // NOLINT
     Derived(self).destroy();
-    self.index_ = polly::variant_npos;
+    self.index_ = variant_npos;
   }
 
   template <class Variant>
@@ -567,7 +565,7 @@ struct VariantCoreAccess {
 
   template <class Variant>
   static void InitFrom(Variant& self, Variant&& other) {  // NOLINT
-    VisitIndices<polly::variant_size<Variant>::value>::Run(
+    VisitIndices<variant_size<Variant>::value>::Run(
         InitFromVisitor<Variant, Variant&&>{&self,
                                             std::forward<Variant>(other)},
         other.index());
@@ -588,11 +586,11 @@ struct VariantCoreAccess {
   // Access a variant alternative, throwing if the index is incorrect.
   template <std::size_t I, class Variant>
   static VariantAccessResult<I, Variant> CheckedAccess(Variant&& self) {
-    if (ABSL_PREDICT_FALSE(self.index_ != I)) {
+    if (POLLY_EXPECT_FALSE(self.index_ != I)) {
       TypedThrowBadVariantAccess<VariantAccessResult<I, Variant>>();
     }
 
-    return Access<I>(polly::forward<Variant>(self));
+    return Access<I>(std::forward<Variant>(self));
   }
 
   // The implementation of the move-assignment operation for a variant.
@@ -609,7 +607,7 @@ struct VariantCoreAccess {
       }
     }
 
-    void operator()(SizeT<polly::variant_npos> /*new_i*/) const {
+    void operator()(SizeT<variant_npos> /*new_i*/) const {
       Destroy(*left);
     }
 
@@ -629,8 +627,7 @@ struct VariantCoreAccess {
     using DerivedType = typename VType::Variant;
     template <std::size_t NewIndex>
     void operator()(SizeT<NewIndex> /*new_i*/) const {
-      using New =
-          typename polly::variant_alternative<NewIndex, DerivedType>::type;
+      using New = typename variant_alternative<NewIndex, DerivedType>::type;
 
       if (left->index_ == NewIndex) {
         Access<NewIndex>(*left) = Access<NewIndex>(*right);
@@ -642,7 +639,7 @@ struct VariantCoreAccess {
       }
     }
 
-    void operator()(SizeT<polly::variant_npos> /*new_i*/) const {
+    void operator()(SizeT<variant_npos> /*new_i*/) const {
       Destroy(*left);
     }
 
@@ -664,24 +661,24 @@ struct VariantCoreAccess {
 
     void operator()(SizeT<NewIndex::value> /*old_i*/
                     ) const {
-      Access<NewIndex::value>(*left) = polly::forward<QualifiedNew>(other);
+      Access<NewIndex::value>(*left) = std::forward<QualifiedNew>(other);
     }
 
     template <std::size_t OldIndex>
     void operator()(SizeT<OldIndex> /*old_i*/
                     ) const {
       using New =
-          typename polly::variant_alternative<NewIndex::value, Left>::type;
+          typename variant_alternative<NewIndex::value, Left>::type;
       if (std::is_nothrow_constructible<New, QualifiedNew>::value ||
           !std::is_nothrow_move_constructible<New>::value) {
         left->template emplace<NewIndex::value>(
-            polly::forward<QualifiedNew>(other));
+            std::forward<QualifiedNew>(other));
       } else {
         // the standard says "equivalent to
         // operator=(variant(std::forward<T>(t)))", but we use `emplace` here
         // because the variant's move assignment operator could be deleted.
         left->template emplace<NewIndex::value>(
-            New(polly::forward<QualifiedNew>(other)));
+            New(std::forward<QualifiedNew>(other)));
       }
     }
 
@@ -692,18 +689,18 @@ struct VariantCoreAccess {
   template <class Left, class QualifiedNew>
   static ConversionAssignVisitor<Left, QualifiedNew>
   MakeConversionAssignVisitor(Left* left, QualifiedNew&& qual) {
-    return {left, polly::forward<QualifiedNew>(qual)};
+    return {left, std::forward<QualifiedNew>(qual)};
   }
 
   // Backend for operations for `emplace()` which destructs `*self` then
   // construct a new alternative with `Args...`.
   template <std::size_t NewIndex, class Self, class... Args>
-  static typename polly::variant_alternative<NewIndex, Self>::type& Replace(
+  static typename variant_alternative<NewIndex, Self>::type& Replace(
       Self* self, Args&&... args) {
     Destroy(*self);
-    using New = typename polly::variant_alternative<NewIndex, Self>::type;
+    using New = typename variant_alternative<NewIndex, Self>::type;
     New* const result = ::new (static_cast<void*>(&self->state_))
-        New(polly::forward<Args>(args)...);
+        New(std::forward<Args>(args)...);
     self->index_ = NewIndex;
     return *result;
   }
@@ -718,7 +715,7 @@ struct VariantCoreAccess {
           Access<NewIndex>(std::forward<QualifiedRightVariant>(right)));
     }
 
-    void operator()(SizeT<polly::variant_npos> /*new_i*/) const {
+    void operator()(SizeT<variant_npos> /*new_i*/) const {
       // This space intentionally left blank.
     }
     LeftVariant* left;
@@ -868,13 +865,13 @@ struct IndexOfConstructedType<
 
 template <std::size_t... Is>
 struct ContainsVariantNPos
-    : polly::negation<std::is_same<  // NOLINT
-          polly::integer_sequence<bool, 0 <= Is...>,
-          polly::integer_sequence<bool, Is != polly::variant_npos...>>> {};
+    : negation<std::is_same<  // NOLINT
+        integer_sequence<bool, 0 <= Is...>,
+        integer_sequence<bool, Is != variant_npos...>>> {};
 
 template <class Op, class... QualifiedVariants>
 using RawVisitResult =
-    polly::result_of_t<Op(VariantAccessResult<0, QualifiedVariants>...)>;
+    result_of_t<Op(VariantAccessResult<0, QualifiedVariants>...)>;
 
 // NOTE: The spec requires that all return-paths yield the same type and is not
 // SFINAE-friendly, so we can deduce the return type by examining the first
@@ -884,8 +881,7 @@ using RawVisitResult =
 // at the cost of longer compile-times.
 template <class Op, class... QualifiedVariants>
 struct VisitResultImpl {
-  using type =
-      polly::result_of_t<Op(VariantAccessResult<0, QualifiedVariants>...)>;
+  using type = result_of_t<Op(VariantAccessResult<0, QualifiedVariants>...)>;
 };
 
 // Done in two steps intentionally so that we don't cause substitution to fail.
@@ -899,7 +895,7 @@ struct PerformVisitation {
   template <std::size_t... Is>
   constexpr ReturnType operator()(SizeT<Is>... indices) const {
     return Run(typename ContainsVariantNPos<Is...>::type{},
-               polly::index_sequence_for<QualifiedVariants...>(), indices...);
+               index_sequence_for<QualifiedVariants...>(), indices...);
   }
 
   template <std::size_t... TupIs, std::size_t... Is>
@@ -907,19 +903,18 @@ struct PerformVisitation {
                            index_sequence<TupIs...>, SizeT<Is>...) const {
     static_assert(
         std::is_same<ReturnType,
-                     polly::result_of_t<Op(VariantAccessResult<
-                                          Is, QualifiedVariants>...)>>::value,
+                     result_of_t<Op(VariantAccessResult<Is, QualifiedVariants>...)>>::value,
         "All visitation overloads must have the same return type.");
-    return polly::base_internal::invoke(
-        polly::forward<Op>(op),
+    return invoke(
+        std::forward<Op>(op),
         VariantCoreAccess::Access<Is>(
-            polly::forward<QualifiedVariants>(std::get<TupIs>(variant_tup)))...);
+            std::forward<QualifiedVariants>(std::get<TupIs>(variant_tup)))...);
   }
 
   template <std::size_t... TupIs, std::size_t... Is>
   [[noreturn]] ReturnType Run(std::true_type /*has_valueless*/,
                               index_sequence<TupIs...>, SizeT<Is>...) const {
-    polly::variant_internal::ThrowBadVariantAccess();
+    ThrowBadVariantAccess();
   }
 
   // TODO(calabrese) Avoid using a tuple, which causes lots of instantiations
@@ -945,13 +940,6 @@ union Union<> {
   constexpr explicit Union(NoopConstructorTag) noexcept {}
 };
 
-// Suppress bogus warning on MSVC: MSVC complains that Union<T...> has a defined
-// deleted destructor from the `std::is_destructible` check below.
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4624)
-#endif  // _MSC_VER
-
 template <class Head, class... Tail>
 union Union<Head, Tail...> {
   using TailUnion = Union<Tail...>;
@@ -961,19 +949,15 @@ union Union<Head, Tail...> {
 
   template <class... P>
   explicit constexpr Union(EmplaceTag<0>, P&&... args)
-      : head(polly::forward<P>(args)...) {}
+      : head(std::forward<P>(args)...) {}
 
   template <std::size_t I, class... P>
   explicit constexpr Union(EmplaceTag<I>, P&&... args)
-      : tail(EmplaceTag<I - 1>{}, polly::forward<P>(args)...) {}
+      : tail(EmplaceTag<I - 1>{}, std::forward<P>(args)...) {}
 
   Head head;
   TailUnion tail;
 };
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif  // _MSC_VER
 
 // TODO(calabrese) Just contain a Union in this union (certain configs fail).
 template <class... T>
@@ -993,11 +977,11 @@ union DestructibleUnionImpl<Head, Tail...> {
 
   template <class... P>
   explicit constexpr DestructibleUnionImpl(EmplaceTag<0>, P&&... args)
-      : head(polly::forward<P>(args)...) {}
+      : head(std::forward<P>(args)...) {}
 
   template <std::size_t I, class... P>
   explicit constexpr DestructibleUnionImpl(EmplaceTag<I>, P&&... args)
-      : tail(EmplaceTag<I - 1>{}, polly::forward<P>(args)...) {}
+      : tail(EmplaceTag<I - 1>{}, std::forward<P>(args)...) {}
 
   ~DestructibleUnionImpl() {}
 
@@ -1010,7 +994,7 @@ union DestructibleUnionImpl<Head, Tail...> {
 // this resultant type.
 template <class... T>
 using DestructibleUnion =
-    polly::conditional_t<std::is_destructible<Union<T...>>::value, Union<T...>,
+    conditional_t<std::is_destructible<Union<T...>>::value, Union<T...>,
                         DestructibleUnionImpl<T...>>;
 
 // Deepest base, containing the actual union and the discriminator
@@ -1020,7 +1004,7 @@ class VariantStateBase {
   using Variant = variant<H, T...>;
 
   template <class LazyH = H,
-            class ConstructibleH = polly::enable_if_t<
+            class ConstructibleH = enable_if_t<
                 std::is_default_constructible<LazyH>::value, LazyH>>
   constexpr VariantStateBase() noexcept(
       std::is_nothrow_default_constructible<ConstructibleH>::value)
@@ -1028,7 +1012,7 @@ class VariantStateBase {
 
   template <std::size_t I, class... P>
   explicit constexpr VariantStateBase(EmplaceTag<I> tag, P&&... args)
-      : state_(tag, polly::forward<P>(args)...), index_(I) {}
+      : state_(tag, std::forward<P>(args)...), index_(I) {}
 
   explicit constexpr VariantStateBase(NoopConstructorTag)
       : state_(NoopConstructorTag()), index_(variant_npos) {}
@@ -1039,11 +1023,9 @@ class VariantStateBase {
   std::size_t index_;
 };
 
-using polly::internal::identity;
-
 // OverloadSet::Overload() is a unary function which is overloaded to
 // take any of the element types of the variant, by reference-to-const.
-// The return type of the overload on T is identity<T>, so that you
+// The return type of the overload on T is type_identity<T>, so that you
 // can statically determine which overload was called.
 //
 // Overload() is not defined, so it can only be called in unevaluated
@@ -1054,7 +1036,7 @@ struct OverloadSet;
 template <typename T, typename... Ts>
 struct OverloadSet<T, Ts...> : OverloadSet<Ts...> {
   using Base = OverloadSet<Ts...>;
-  static identity<T> Overload(const T&);
+  static type_identity<T> Overload(const T&);
   using Base::Overload;
 };
 
@@ -1083,42 +1065,34 @@ using EqualResult = decltype(std::declval<T>() == std::declval<T>());
 template <class T>
 using NotEqualResult = decltype(std::declval<T>() != std::declval<T>());
 
-using type_traits_internal::is_detected_convertible;
-
 template <class... T>
-using RequireAllHaveEqualT = polly::enable_if_t<
-    polly::conjunction<is_detected_convertible<bool, EqualResult, T>...>::value,
-    bool>;
+using RequireAllHaveEqualT = enable_if_t<
+    conjunction<is_detected_convertible<bool, EqualResult, T>...>::value, bool>;
 
 template <class... T>
 using RequireAllHaveNotEqualT =
-    polly::enable_if_t<polly::conjunction<is_detected_convertible<
-                          bool, NotEqualResult, T>...>::value,
-                      bool>;
+    enable_if_t<conjunction<is_detected_convertible<
+        bool, NotEqualResult, T>...>::value, bool>;
 
 template <class... T>
 using RequireAllHaveLessThanT =
-    polly::enable_if_t<polly::conjunction<is_detected_convertible<
-                          bool, LessThanResult, T>...>::value,
-                      bool>;
+    enable_if_t<conjunction<is_detected_convertible<
+        bool, LessThanResult, T>...>::value, bool>;
 
 template <class... T>
 using RequireAllHaveLessThanOrEqualT =
-    polly::enable_if_t<polly::conjunction<is_detected_convertible<
-                          bool, LessThanOrEqualResult, T>...>::value,
-                      bool>;
+    enable_if_t<conjunction<is_detected_convertible<
+        bool, LessThanOrEqualResult, T>...>::value, bool>;
 
 template <class... T>
 using RequireAllHaveGreaterThanOrEqualT =
-    polly::enable_if_t<polly::conjunction<is_detected_convertible<
-                          bool, GreaterThanOrEqualResult, T>...>::value,
-                      bool>;
+    enable_if_t<conjunction<is_detected_convertible<
+        bool, GreaterThanOrEqualResult, T>...>::value, bool>;
 
 template <class... T>
 using RequireAllHaveGreaterThanT =
-    polly::enable_if_t<polly::conjunction<is_detected_convertible<
-                          bool, GreaterThanResult, T>...>::value,
-                      bool>;
+    enable_if_t<conjunction<is_detected_convertible<
+        bool, GreaterThanResult, T>...>::value, bool>;
 
 // Helper template containing implementations details of variant that can't go
 // in the private section. For convenience, this takes the variant type as a
@@ -1151,7 +1125,7 @@ struct VariantHelper<variant<Ts...>> {
 
   template <typename... Us>
   struct CanConvertFrom<variant<Us...>>
-      : public polly::conjunction<CanAccept<Us>...> {};
+      : public conjunction<CanAccept<Us>...> {};
 };
 
 // A type with nontrivial copy ctor and trivial move ctor.
@@ -1200,9 +1174,9 @@ class VariantCopyAssignBaseNontrivial;
 // Base that is dependent on whether or not the destructor can be trivial.
 template <class... T>
 using VariantStateBaseDestructor =
-    polly::conditional_t<std::is_destructible<Union<T...>>::value,
-                        VariantStateBase<T...>,
-                        VariantStateBaseDestructorNontrivial<T...>>;
+    conditional_t<std::is_destructible<Union<T...>>::value,
+                  VariantStateBase<T...>,
+                  VariantStateBaseDestructorNontrivial<T...>>;
 
 // Base that is dependent on whether or not the move-constructor can be
 // implicitly generated by the compiler (trivial or deleted).
@@ -1212,46 +1186,40 @@ using VariantStateBaseDestructor =
 // So we have to use a different approach (i.e. `HasTrivialMoveConstructor`) to
 // work around the bug.
 template <class... T>
-using VariantMoveBase = polly::conditional_t<
-    polly::disjunction<
-        polly::negation<polly::conjunction<std::is_move_constructible<T>...>>,
-        polly::conjunction<IsTriviallyMoveConstructible<T>...>>::value,
+using VariantMoveBase = conditional_t<
+    disjunction<
+        negation<conjunction<std::is_move_constructible<T>...>>,
+        conjunction<IsTriviallyMoveConstructible<T>...>>::value,
     VariantStateBaseDestructor<T...>, VariantMoveBaseNontrivial<T...>>;
 
 // Base that is dependent on whether or not the copy-constructor can be trivial.
 template <class... T>
-using VariantCopyBase = polly::conditional_t<
-    polly::disjunction<
-        polly::negation<polly::conjunction<std::is_copy_constructible<T>...>>,
+using VariantCopyBase = conditional_t<
+    disjunction<
+        negation<conjunction<std::is_copy_constructible<T>...>>,
         std::is_copy_constructible<Union<T...>>>::value,
     VariantMoveBase<T...>, VariantCopyBaseNontrivial<T...>>;
 
 // Base that is dependent on whether or not the move-assign can be trivial.
 template <class... T>
-using VariantMoveAssignBase = polly::conditional_t<
-    polly::disjunction<
-        polly::conjunction<polly::is_move_assignable<Union<T...>>,
-                          std::is_move_constructible<Union<T...>>,
-                          std::is_destructible<Union<T...>>>,
-        polly::negation<polly::conjunction<std::is_move_constructible<T>...,
-                                         // Note: We're not qualifying this with
-                                         // polly:: because it doesn't compile
-                                         // under MSVC.
-                                         is_move_assignable<T>...>>>::value,
+using VariantMoveAssignBase = conditional_t<
+    disjunction<
+        conjunction<std::is_move_assignable<Union<T...>>,
+                    std::is_move_constructible<Union<T...>>,
+                    std::is_destructible<Union<T...>>>,
+        negation<conjunction<std::is_move_constructible<T>...,
+                             std::is_move_assignable<T>...>>>::value,
     VariantCopyBase<T...>, VariantMoveAssignBaseNontrivial<T...>>;
 
 // Base that is dependent on whether or not the copy-assign can be trivial.
 template <class... T>
-using VariantCopyAssignBase = polly::conditional_t<
-    polly::disjunction<
-        polly::conjunction<polly::is_copy_assignable<Union<T...>>,
-                          std::is_copy_constructible<Union<T...>>,
-                          std::is_destructible<Union<T...>>>,
-        polly::negation<polly::conjunction<std::is_copy_constructible<T>...,
-                                         // Note: We're not qualifying this with
-                                         // polly:: because it doesn't compile
-                                         // under MSVC.
-                                         is_copy_assignable<T>...>>>::value,
+using VariantCopyAssignBase = conditional_t<
+    disjunction<
+        conjunction<std::is_copy_assignable<Union<T...>>,
+                    std::is_copy_constructible<Union<T...>>,
+                    std::is_destructible<Union<T...>>>,
+        negation<conjunction<std::is_copy_constructible<T>...,
+                             std::is_copy_assignable<T>...>>>::value,
     VariantMoveAssignBase<T...>, VariantCopyAssignBaseNontrivial<T...>>;
 
 template <class... T>
@@ -1279,11 +1247,11 @@ class VariantStateBaseDestructorNontrivial : protected VariantStateBase<T...> {
     template <std::size_t I>
     void operator()(SizeT<I> i) const {
       using Alternative =
-          typename polly::variant_alternative<I, variant<T...>>::type;
+          typename variant_alternative<I, variant<T...>>::type;
       variant_internal::AccessUnion(self->state_, i).~Alternative();
     }
 
-    void operator()(SizeT<polly::variant_npos> /*i*/) const {
+    void operator()(SizeT<variant_npos> /*i*/) const {
       // This space intentionally left blank
     }
 
@@ -1311,12 +1279,12 @@ class VariantMoveBaseNontrivial : protected VariantStateBaseDestructor<T...> {
     template <std::size_t I>
     void operator()(SizeT<I> i) const {
       using Alternative =
-          typename polly::variant_alternative<I, variant<T...>>::type;
+          typename variant_alternative<I, variant<T...>>::type;
       ::new (static_cast<void*>(&self->state_)) Alternative(
-          variant_internal::AccessUnion(polly::move(other->state_), i));
+          variant_internal::AccessUnion(std::move(other->state_), i));
     }
 
-    void operator()(SizeT<polly::variant_npos> /*i*/) const {}
+    void operator()(SizeT<variant_npos> /*i*/) const {}
 
     VariantMoveBaseNontrivial* self;
     VariantMoveBaseNontrivial* other;
@@ -1324,7 +1292,7 @@ class VariantMoveBaseNontrivial : protected VariantStateBaseDestructor<T...> {
 
   VariantMoveBaseNontrivial() = default;
   VariantMoveBaseNontrivial(VariantMoveBaseNontrivial&& other) noexcept(
-      polly::conjunction<std::is_nothrow_move_constructible<T>...>::value)
+      conjunction<std::is_nothrow_move_constructible<T>...>::value)
       : Base(NoopConstructorTag()) {
     VisitIndices<sizeof...(T)>::Run(Construct{this, &other}, other.index_);
     index_ = other.index_;
@@ -1356,12 +1324,12 @@ class VariantCopyBaseNontrivial : protected VariantMoveBase<T...> {
     template <std::size_t I>
     void operator()(SizeT<I> i) const {
       using Alternative =
-          typename polly::variant_alternative<I, variant<T...>>::type;
+          typename variant_alternative<I, variant<T...>>::type;
       ::new (static_cast<void*>(&self->state_))
           Alternative(variant_internal::AccessUnion(other->state_, i));
     }
 
-    void operator()(SizeT<polly::variant_npos> /*i*/) const {}
+    void operator()(SizeT<variant_npos> /*i*/) const {}
 
     VariantCopyBaseNontrivial* self;
     const VariantCopyBaseNontrivial* other;
@@ -1401,8 +1369,8 @@ class VariantMoveAssignBaseNontrivial : protected VariantCopyBase<T...> {
 
     VariantMoveAssignBaseNontrivial&
     operator=(VariantMoveAssignBaseNontrivial&& other) noexcept(
-        polly::conjunction<std::is_nothrow_move_constructible<T>...,
-                          std::is_nothrow_move_assignable<T>...>::value) {
+        conjunction<std::is_nothrow_move_constructible<T>...,
+                    std::is_nothrow_move_assignable<T>...>::value) {
       VisitIndices<sizeof...(T)>::Run(
           VariantCoreAccess::MakeMoveAssignVisitor(this, &other), other.index_);
       return *this;
@@ -1451,7 +1419,7 @@ struct EqualsOp {
   const variant<Types...>* v;
   const variant<Types...>* w;
 
-  constexpr bool operator()(SizeT<polly::variant_npos> /*v_i*/) const {
+  constexpr bool operator()(SizeT<variant_npos> /*v_i*/) const {
     return true;
   }
 
@@ -1466,7 +1434,7 @@ struct NotEqualsOp {
   const variant<Types...>* v;
   const variant<Types...>* w;
 
-  constexpr bool operator()(SizeT<polly::variant_npos> /*v_i*/) const {
+  constexpr bool operator()(SizeT<variant_npos> /*v_i*/) const {
     return false;
   }
 
@@ -1481,7 +1449,7 @@ struct LessThanOp {
   const variant<Types...>* v;
   const variant<Types...>* w;
 
-  constexpr bool operator()(SizeT<polly::variant_npos> /*v_i*/) const {
+  constexpr bool operator()(SizeT<variant_npos> /*v_i*/) const {
     return false;
   }
 
@@ -1496,7 +1464,7 @@ struct GreaterThanOp {
   const variant<Types...>* v;
   const variant<Types...>* w;
 
-  constexpr bool operator()(SizeT<polly::variant_npos> /*v_i*/) const {
+  constexpr bool operator()(SizeT<variant_npos> /*v_i*/) const {
     return false;
   }
 
@@ -1511,7 +1479,7 @@ struct LessThanOrEqualsOp {
   const variant<Types...>* v;
   const variant<Types...>* w;
 
-  constexpr bool operator()(SizeT<polly::variant_npos> /*v_i*/) const {
+  constexpr bool operator()(SizeT<variant_npos> /*v_i*/) const {
     return true;
   }
 
@@ -1526,7 +1494,7 @@ struct GreaterThanOrEqualsOp {
   const variant<Types...>* v;
   const variant<Types...>* w;
 
-  constexpr bool operator()(SizeT<polly::variant_npos> /*v_i*/) const {
+  constexpr bool operator()(SizeT<variant_npos> /*v_i*/) const {
     return true;
   }
 
@@ -1541,10 +1509,10 @@ template <class... Types>
 struct SwapSameIndex {
   variant<Types...>* v;
   variant<Types...>* w;
+
   template <std::size_t I>
   void operator()(SizeT<I>) const {
-    type_traits_internal::Swap(VariantCoreAccess::Access<I>(*v),
-                               VariantCoreAccess::Access<I>(*w));
+    std::swap(VariantCoreAccess::Access<I>(*v), VariantCoreAccess::Access<I>(*w));
   }
 
   void operator()(SizeT<variant_npos>) const {}
@@ -1564,7 +1532,7 @@ struct Swap {
     VariantCoreAccess::InitFrom(*v, std::move(tmp));
   }
 
-  void operator()(SizeT<polly::variant_npos> /*w_i*/) const {
+  void operator()(SizeT<variant_npos> /*w_i*/) const {
     if (!v->valueless_by_exception()) {
       generic_swap();
     }
@@ -1598,12 +1566,12 @@ struct VariantHashVisitor {
 
 template <typename Variant, typename... Ts>
 struct VariantHashBase<Variant,
-                       polly::enable_if_t<polly::conjunction<
-                           type_traits_internal::IsHashable<Ts>...>::value>,
+                       enable_if_t<conjunction<
+                       is_hashable<Ts>...>::value>,
                        Ts...> {
   using argument_type = Variant;
-  using result_type = size_t;
-  size_t operator()(const Variant& var) const {
+  using result_type = std::size_t;
+  result_type operator()(const Variant& var) const {
     type_traits_internal::AssertHashEnabled<Ts...>();
     if (var.valueless_by_exception()) {
       return 239799884;

@@ -4,6 +4,7 @@
 
 #include <type_traits>
 #include <utility>
+#include <functional>
 
 namespace polly {
 template <typename...>
@@ -43,6 +44,9 @@ struct negation: std::integral_constant<bool, !Tp::value> {};
 
 template <bool Value, typename Tp = void>
 using enable_if_t = typename std::enable_if<Value, Tp>::type;
+
+template <bool Cond, typename TrueType, typename FalseType>
+using conditional_t = typename std::conditional<Cond, TrueType, FalseType>::type;
 
 template <typename Tp>
 using decay_t = typename std::decay<Tp>::type;
@@ -253,6 +257,28 @@ struct is_trivially_move_constructible_object
 
 } // namespace type_traits_internal
 
+// is_trivially_default_constructible
+template <typename Tp>
+struct is_trivially_default_constructible
+    : std::integral_constant<
+        bool,
+        __has_trivial_constructor(Tp) &&
+        std::is_default_constructible<Tp>::value &&
+        std::is_trivially_destructible<Tp>::value> {
+#if defined(POLLY_HAVE_STD_IS_TRIVIALLY_DEFAULT_CONSTRUCTIBLE)
+private:
+  static constexpr bool compliant =
+      std::is_trivially_default_constructible<Tp>::value ==
+      is_trivially_default_constructible::value;
+  static_assert(compliant || std::is_trivially_default_constructible<Tp>::value,
+                "Not compliant with std::is_trivially_default_constructible; "
+                "Standard: false, Implementation: true");
+  static_assert(compliant || !std::is_trivially_default_constructible<Tp>::value,
+                "Not compliant with std::is_trivially_default_constructible; "
+                "Standard: true, Implementation: false");
+#endif // POLLY_HAVE_STD_IS_TRIVIALLY_DEFAULT_CONSTRUCTIBLE
+};
+
 // is_trivially_copy_constructible
 template <typename Tp>
 struct is_trivially_copy_constructible
@@ -395,6 +421,12 @@ struct is_nothrow_swappable_helper {
 
 } // namespace type_traits_internal
 
+template <typename To, template <typename...> class Op, typename... Args>
+struct is_detected_convertible
+    : conditional_t<std::is_convertible<Op<Args...>, To>::value,
+                  std::true_type, std::false_type> {};
+
+
 template <typename Tp>
 struct is_swappable
     : type_traits_internal::is_swappable_helper<Tp>::type {};
@@ -407,6 +439,54 @@ using StdSwapIsUnconstrained = is_swappable<void()>;
 template <typename Tp>
 struct is_nothrow_swappable
     : type_traits_internal::is_nothrow_swappable_helper<Tp>::type {};
+
+template <typename Key, typename = void>
+struct is_hashable: std::false_type {};
+
+#define POLLY_INTERNAL_HASHABLE_FN_TYPE(key) \
+  decltype(std::declval<std::hash<key>&>()(std::declval<Key const&>()))
+
+template <typename Key>
+struct is_hashable<
+    Key,
+    enable_if_t<std::is_convertible<POLLY_INTERNAL_HASHABLE_FN_TYPE(Key),
+                                    std::size_t>::value>>: std::true_type {};
+
+namespace type_traits_internal {
+class AssertHashEnabledHelper {
+  static void Sink(...) {}
+  struct NAT {};
+
+  template <typename Key>
+  static auto GetReturnType(int) ->POLLY_INTERNAL_HASHABLE_FN_TYPE(Key);
+  template <typename Key>
+  static NAT GetReturnType(...);
+
+  template <typename Key>
+  static nullptr_t DoIt() {
+    static_assert(is_hashable<Key>::value,
+                  "std::hash<Key> does not provide a call operator.");
+    static_assert(std::is_default_constructible<std::hash<Key>>::value,
+                  "std::hash<Key> must be default constructible.");
+    static_assert(std::is_copy_constructible<std::hash<Key>>::value,
+                  "std::hash<Key> must be copy constructible.");
+    static_assert(std::is_copy_assignable<std::hash<Key>>::value,
+                  "std::hash<Key> must be copy assignable.");
+    using ReturnType = decltype(GetReturnType<Key>(0));
+    static_assert(std::is_same<ReturnType, std::size_t>::value,
+                  "std::hash<Key> must return std::size_t");
+    return nullptr;
+  }
+
+  template <typename... Types>
+  friend void AssertHashEnabled();
+};
+
+template <typename... Types>
+inline void AssertHashEnabled() {
+  AssertHashEnabledHelper::Sink(AssertHashEnabledHelper::DoIt<Types>()...);
+}
+} // namespace type_traits_internal
 
 // integer_sequence
 // The class template integer_sequence represents a compile-time sequence
@@ -472,5 +552,20 @@ struct type_identity {
 
 template <typename Tp>
 using type_identity_t = typename type_identity<Tp>::type;
+
+namespace type_traits_internal {
+#if __cplusplus >= 201703L
+template <typename> struct result_of;
+
+template <typename Fn, typename... Args>
+struct result_of<Fn(Args...)>: std::invoke_result<Fn, Args...> {};
+#else
+template <typename Fn>
+using result_of = std::result_of<Fn>;
+#endif
+} // namespace type_traits_internal
+
+template <typename Fn>
+using result_of_t = typename type_traits_internal::result_of<Fn>::type;
 
 } // namespace polly

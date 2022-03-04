@@ -16,41 +16,38 @@
 // variant.h
 // -----------------------------------------------------------------------------
 //
-// This header file defines an `absl::variant` type for holding a type-safe
+// This header file defines an `polly::variant` type for holding a type-safe
 // value of some prescribed set of types (noted as alternative types), and
 // associated functions for managing variants.
 //
-// The `absl::variant` type is a form of type-safe union. An `absl::variant`
+// The `polly::variant` type is a form of type-safe union. An `polly::variant`
 // should always hold a value of one of its alternative types (except in the
 // "valueless by exception state" -- see below). A default-constructed
-// `absl::variant` will hold the value of its first alternative type, provided
+// `polly::variant` will hold the value of its first alternative type, provided
 // it is default-constructible.
 //
-// In exceptional cases due to error, an `absl::variant` can hold no
+// In exceptional cases due to error, an `polly::variant` can hold no
 // value (known as a "valueless by exception" state), though this is not the
 // norm.
 //
-// As with `absl::optional`, an `absl::variant` -- when it holds a value --
+// As with `polly::optional`, an `polly::variant` -- when it holds a value --
 // allocates a value of that type directly within the `variant` itself; it
 // cannot hold a reference, array, or the type `void`; it can, however, hold a
 // pointer to externally managed memory.
 //
-// `absl::variant` is a C++11 compatible version of the C++17 `std::variant`
+// `polly::variant` is a C++11 compatible version of the C++17 `std::variant`
 // abstraction and is designed to be a drop-in replacement for code compliant
 // with C++17.
 
-#ifndef ABSL_TYPES_VARIANT_H_
-#define ABSL_TYPES_VARIANT_H_
+#pragma once
 
-#include "absl/base/config.h"
-#include "absl/utility/utility.h"
+#include "polly/stubs/internal/config.h"
 
-#ifdef ABSL_USES_STD_VARIANT
+#if defined(POLLY_HAVE_STD_VARIANT)
 
-#include <variant>  // IWYU pragma: export
+#include <variant>
 
-namespace absl {
-ABSL_NAMESPACE_BEGIN
+namespace polly {
 using std::bad_variant_access;
 using std::get;
 using std::get_if;
@@ -63,29 +60,19 @@ using std::variant_npos;
 using std::variant_size;
 using std::variant_size_v;
 using std::visit;
-ABSL_NAMESPACE_END
-}  // namespace absl
+}  // namespace polly
 
-#else  // ABSL_USES_STD_VARIANT
+#else  // POLLY_HAVE_STD_VARIANT
 
-#include <functional>
-#include <new>
-#include <type_traits>
-#include <utility>
+#include "polly/stubs/internal/variant.h"
 
-#include "absl/base/macros.h"
-#include "absl/base/port.h"
-#include "absl/meta/type_traits.h"
-#include "absl/types/internal/variant.h"
-
-namespace absl {
-ABSL_NAMESPACE_BEGIN
+namespace polly {
 
 // -----------------------------------------------------------------------------
-// absl::variant
+// polly::variant
 // -----------------------------------------------------------------------------
 //
-// An `absl::variant` type is a form of type-safe union. An `absl::variant` --
+// An `polly::variant` type is a form of type-safe union. An `polly::variant` --
 // except in exceptional cases -- always holds a value of one of its alternative
 // types.
 //
@@ -93,29 +80,29 @@ ABSL_NAMESPACE_BEGIN
 //
 //   // Construct a variant that holds either an integer or a std::string and
 //   // assign it to a std::string.
-//   absl::variant<int, std::string> v = std::string("abc");
+//   polly::variant<int, std::string> v = std::string("abc");
 //
 //   // A default-constructed variant will hold a value-initialized value of
 //   // the first alternative type.
-//   auto a = absl::variant<int, std::string>();   // Holds an int of value '0'.
+//   auto a = polly::variant<int, std::string>();   // Holds an int of value '0'.
 //
 //   // variants are assignable.
 //
 //   // copy assignment
-//   auto v1 = absl::variant<int, std::string>("abc");
-//   auto v2 = absl::variant<int, std::string>(10);
+//   auto v1 = polly::variant<int, std::string>("abc");
+//   auto v2 = polly::variant<int, std::string>(10);
 //   v2 = v1;  // copy assign
 //
 //   // move assignment
-//   auto v1 = absl::variant<int, std::string>("abc");
-//   v1 = absl::variant<int, std::string>(10);
+//   auto v1 = polly::variant<int, std::string>("abc");
+//   v1 = polly::variant<int, std::string>(10);
 //
 //   // assignment through type conversion
 //   a = 128;         // variant contains int
 //   a = "128";       // variant contains std::string
 //
-// An `absl::variant` holding a value of one of its alternative types `T` holds
-// an allocation of `T` directly within the variant itself. An `absl::variant`
+// An `polly::variant` holding a value of one of its alternative types `T` holds
+// an allocation of `T` directly within the variant itself. An `polly::variant`
 // is not allowed to allocate additional storage, such as dynamic memory, to
 // allocate the contained value. The contained value shall be allocated in a
 // region of the variant storage suitably aligned for all alternative types.
@@ -124,8 +111,8 @@ class variant;
 
 // swap()
 //
-// Swaps two `absl::variant` values. This function is equivalent to `v.swap(w)`
-// where `v` and `w` are `absl::variant` types.
+// Swaps two `polly::variant` values. This function is equivalent to `v.swap(w)`
+// where `v` and `w` are `polly::variant` types.
 //
 // Note that this function requires all alternative types to be both swappable
 // and move-constructible, because any two variants may refer to either the same
@@ -134,9 +121,9 @@ class variant;
 //
 template <
     typename... Ts,
-    absl::enable_if_t<
-        absl::conjunction<std::is_move_constructible<Ts>...,
-                          type_traits_internal::IsSwappable<Ts>...>::value,
+    enable_if_t<
+        conjunction<std::is_move_constructible<Ts>...,
+                    is_swappable<Ts>...>::value,
         int> = 0>
 void swap(variant<Ts...>& v, variant<Ts...>& w) noexcept(noexcept(v.swap(w))) {
   v.swap(w);
@@ -144,25 +131,25 @@ void swap(variant<Ts...>& v, variant<Ts...>& w) noexcept(noexcept(v.swap(w))) {
 
 // variant_size
 //
-// Returns the number of alternative types available for a given `absl::variant`
+// Returns the number of alternative types available for a given `polly::variant`
 // type as a compile-time constant expression. As this is a class template, it
 // is not generally useful for accessing the number of alternative types of
-// any given `absl::variant` instance.
+// any given `polly::variant` instance.
 //
 // Example:
 //
-//   auto a = absl::variant<int, std::string>;
+//   auto a = polly::variant<int, std::string>;
 //   constexpr int num_types =
-//       absl::variant_size<absl::variant<int, std::string>>();
+//       polly::variant_size<polly::variant<int, std::string>>();
 //
 //   // You can also use the member constant `value`.
 //   constexpr int num_types =
-//       absl::variant_size<absl::variant<int, std::string>>::value;
+//       polly::variant_size<polly::variant<int, std::string>>::value;
 //
-//   // `absl::variant_size` is more valuable for use in generic code:
+//   // `polly::variant_size` is more valuable for use in generic code:
 //   template <typename Variant>
 //   constexpr bool IsVariantMultivalue() {
-//       return absl::variant_size<Variant>() > 1;
+//       return polly::variant_size<Variant>() > 1;
 //   }
 //
 // Note that the set of cv-qualified specializations of `variant_size` are
@@ -189,20 +176,20 @@ struct variant_size<const volatile T> : variant_size<T>::type {};
 
 // variant_alternative
 //
-// Returns the alternative type for a given `absl::variant` at the passed
+// Returns the alternative type for a given `polly::variant` at the passed
 // index value as a compile-time constant expression. As this is a class
 // template resulting in a type, it is not useful for access of the run-time
-// value of any given `absl::variant` variable.
+// value of any given `polly::variant` variable.
 //
 // Example:
 //
 //   // The type of the 0th alternative is "int".
 //   using alternative_type_0
-//     = absl::variant_alternative<0, absl::variant<int, std::string>>::type;
+//     = polly::variant_alternative<0, polly::variant<int, std::string>>::type;
 //
 //   static_assert(std::is_same<alternative_type_0, int>::value, "");
 //
-//   // `absl::variant_alternative` is more valuable for use in generic code:
+//   // `polly::variant_alternative` is more valuable for use in generic code:
 //   template <typename Variant>
 //   constexpr bool IsFirstElementTrivial() {
 //       return std::is_trivial_v<variant_alternative<0, Variant>::type>;
@@ -244,7 +231,7 @@ struct variant_alternative<I, const volatile T> {
 // Example:
 //
 //   using alternative_type_0
-//     = absl::variant_alternative_t<0, absl::variant<int, std::string>>;
+//     = polly::variant_alternative_t<0, polly::variant<int, std::string>>;
 //   static_assert(std::is_same<alternative_type_0, int>::value, "");
 template <std::size_t I, class T>
 using variant_alternative_t = typename variant_alternative<I, T>::type;
@@ -256,8 +243,8 @@ using variant_alternative_t = typename variant_alternative<I, T>::type;
 //
 // Example:
 //
-//   absl::variant<int, std::string> foo = 42;
-//   if (absl::holds_alternative<int>(foo)) {
+//   polly::variant<int, std::string> foo = 42;
+//   if (polly::holds_alternative<int>(foo)) {
 //       std::cout << "The variant holds an integer";
 //   }
 template <class T, class... Types>
@@ -278,22 +265,22 @@ constexpr bool holds_alternative(const variant<Types...>& v) noexcept {
 // using a type that is not unique within the variant's set of alternative types
 // is a compile-time error. If the index of the alternative being specified is
 // different from the index of the alternative that is currently stored, throws
-// `absl::bad_variant_access`.
+// `polly::bad_variant_access`.
 //
 // Example:
 //
-//   auto a = absl::variant<int, std::string>;
+//   auto a = polly::variant<int, std::string>;
 //
 //   // Get the value by type (if unique).
-//   int i = absl::get<int>(a);
+//   int i = polly::get<int>(a);
 //
-//   auto b = absl::variant<int, int>;
+//   auto b = polly::variant<int, int>;
 //
 //   // Getting the value by a type that is not unique is ill-formed.
-//   int j = absl::get<int>(b);     // Compile Error!
+//   int j = polly::get<int>(b);     // Compile Error!
 //
 //   // Getting value by index not ambiguous and allowed.
-//   int k = absl::get<1>(b);
+//   int k = polly::get<1>(b);
 
 // Overload for getting a variant's lvalue by type.
 template <class T, class... Types>
@@ -303,11 +290,10 @@ constexpr T& get(variant<Types...>& v) {  // NOLINT
 }
 
 // Overload for getting a variant's rvalue by type.
-// Note: `absl::move()` is required to allow use of constexpr in C++11.
 template <class T, class... Types>
 constexpr T&& get(variant<Types...>&& v) {
   return variant_internal::VariantCoreAccess::CheckedAccess<
-      variant_internal::IndexOf<T, Types...>::value>(absl::move(v));
+      variant_internal::IndexOf<T, Types...>::value>(std::move(v));
 }
 
 // Overload for getting a variant's const lvalue by type.
@@ -318,11 +304,10 @@ constexpr const T& get(const variant<Types...>& v) {
 }
 
 // Overload for getting a variant's const rvalue by type.
-// Note: `absl::move()` is required to allow use of constexpr in C++11.
 template <class T, class... Types>
 constexpr const T&& get(const variant<Types...>&& v) {
   return variant_internal::VariantCoreAccess::CheckedAccess<
-      variant_internal::IndexOf<T, Types...>::value>(absl::move(v));
+      variant_internal::IndexOf<T, Types...>::value>(std::move(v));
 }
 
 // Overload for getting a variant's lvalue by index.
@@ -333,11 +318,10 @@ constexpr variant_alternative_t<I, variant<Types...>>& get(
 }
 
 // Overload for getting a variant's rvalue by index.
-// Note: `absl::move()` is required to allow use of constexpr in C++11.
 template <std::size_t I, class... Types>
 constexpr variant_alternative_t<I, variant<Types...>>&& get(
     variant<Types...>&& v) {
-  return variant_internal::VariantCoreAccess::CheckedAccess<I>(absl::move(v));
+  return variant_internal::VariantCoreAccess::CheckedAccess<I>(std::move(v));
 }
 
 // Overload for getting a variant's const lvalue by index.
@@ -348,11 +332,10 @@ constexpr const variant_alternative_t<I, variant<Types...>>& get(
 }
 
 // Overload for getting a variant's const rvalue by index.
-// Note: `absl::move()` is required to allow use of constexpr in C++11.
 template <std::size_t I, class... Types>
 constexpr const variant_alternative_t<I, variant<Types...>>&& get(
     const variant<Types...>&& v) {
-  return variant_internal::VariantCoreAccess::CheckedAccess<I>(absl::move(v));
+  return variant_internal::VariantCoreAccess::CheckedAccess<I>(std::move(v));
 }
 
 // get_if()
@@ -368,7 +351,7 @@ constexpr const variant_alternative_t<I, variant<Types...>>&& get(
 // Overload for getting a pointer to the value stored in the given variant by
 // index.
 template <std::size_t I, class... Types>
-constexpr absl::add_pointer_t<variant_alternative_t<I, variant<Types...>>>
+constexpr add_pointer_t<variant_alternative_t<I, variant<Types...>>>
 get_if(variant<Types...>* v) noexcept {
   return (v != nullptr && v->index() == I)
              ? std::addressof(
@@ -379,7 +362,7 @@ get_if(variant<Types...>* v) noexcept {
 // Overload for getting a pointer to the const value stored in the given
 // variant by index.
 template <std::size_t I, class... Types>
-constexpr absl::add_pointer_t<const variant_alternative_t<I, variant<Types...>>>
+constexpr add_pointer_t<const variant_alternative_t<I, variant<Types...>>>
 get_if(const variant<Types...>* v) noexcept {
   return (v != nullptr && v->index() == I)
              ? std::addressof(
@@ -390,21 +373,21 @@ get_if(const variant<Types...>* v) noexcept {
 // Overload for getting a pointer to the value stored in the given variant by
 // type.
 template <class T, class... Types>
-constexpr absl::add_pointer_t<T> get_if(variant<Types...>* v) noexcept {
-  return absl::get_if<variant_internal::IndexOf<T, Types...>::value>(v);
+constexpr add_pointer_t<T> get_if(variant<Types...>* v) noexcept {
+  return polly::get_if<variant_internal::IndexOf<T, Types...>::value>(v);
 }
 
 // Overload for getting a pointer to the const value stored in the given variant
 // by type.
 template <class T, class... Types>
-constexpr absl::add_pointer_t<const T> get_if(
+constexpr add_pointer_t<const T> get_if(
     const variant<Types...>* v) noexcept {
-  return absl::get_if<variant_internal::IndexOf<T, Types...>::value>(v);
+  return polly::get_if<variant_internal::IndexOf<T, Types...>::value>(v);
 }
 
 // visit()
 //
-// Calls a provided functor on a given set of variants. `absl::visit()` is
+// Calls a provided functor on a given set of variants. `polly::visit()` is
 // commonly used to conditionally inspect the state of a given variant (or set
 // of variants).
 //
@@ -421,20 +404,23 @@ constexpr absl::add_pointer_t<const T> get_if(
 //       }
 //   };
 //
-//   // Declare our variant, and call `absl::visit()` on it.
+//   // Declare our variant, and call `polly::visit()` on it.
 //   // Note that `GetVariant()` returns void in either case.
-//   absl::variant<int, std::string> foo = std::string("foo");
+//   polly::variant<int, std::string> foo = std::string("foo");
 //   GetVariant visitor;
-//   absl::visit(visitor, foo);  // Prints `The variant's value is: foo'
+//   polly::visit(visitor, foo);  // Prints `The variant's value is: foo'
 template <typename Visitor, typename... Variants>
 variant_internal::VisitResult<Visitor, Variants...> visit(Visitor&& vis,
                                                           Variants&&... vars) {
   return variant_internal::
-      VisitIndices<variant_size<absl::decay_t<Variants> >::value...>::Run(
-          variant_internal::PerformVisitation<Visitor, Variants...>{
-              std::forward_as_tuple(absl::forward<Variants>(vars)...),
-              absl::forward<Visitor>(vis)},
-          vars.index()...);
+      VisitIndices<variant_size<decay_t<Variants> >::value...>::Run(
+          variant_internal::
+          PerformVisitation<Visitor, Variants...>{
+              std::forward_as_tuple(std::forward<Variants>(vars)...),
+              std::forward<Visitor>(vis)
+          },
+          vars.index()...
+      );
 }
 
 // monostate
@@ -443,7 +429,7 @@ variant_internal::VisitResult<Visitor, Variants...> visit(Visitor&& vis,
 // which the first variant type is otherwise not default-constructible.
 struct monostate {};
 
-// `absl::monostate` Relational Operators
+// `polly::monostate` Relational Operators
 
 constexpr bool operator<(monostate, monostate) noexcept { return false; }
 constexpr bool operator>(monostate, monostate) noexcept { return false; }
@@ -454,21 +440,17 @@ constexpr bool operator!=(monostate, monostate) noexcept { return false; }
 
 
 //------------------------------------------------------------------------------
-// `absl::variant` Template Definition
+// `polly::variant` Template Definition
 //------------------------------------------------------------------------------
 template <typename T0, typename... Tn>
 class variant<T0, Tn...> : private variant_internal::VariantBase<T0, Tn...> {
-  static_assert(absl::conjunction<std::is_object<T0>,
-                                  std::is_object<Tn>...>::value,
-                "Attempted to instantiate a variant containing a non-object "
-                "type.");
-  // Intentionally not qualifying `negation` with `absl::` to work around a bug
-  // in MSVC 2015 with inline namespace and variadic template.
-  static_assert(absl::conjunction<negation<std::is_array<T0> >,
-                                  negation<std::is_array<Tn> >...>::value,
+  static_assert(conjunction<std::is_object<T0>, std::is_object<Tn>...>::value,
+                "Attempted to instantiate a variant containing a non-object type.");
+  static_assert(conjunction<negation<std::is_array<T0> >,
+                            negation<std::is_array<Tn> >...>::value,
                 "Attempted to instantiate a variant containing an array type.");
-  static_assert(absl::conjunction<std::is_nothrow_destructible<T0>,
-                                  std::is_nothrow_destructible<Tn>...>::value,
+  static_assert(conjunction<std::is_nothrow_destructible<T0>,
+                            std::is_nothrow_destructible<Tn>...>::value,
                 "Attempted to instantiate a variant containing a non-nothrow "
                 "destructible type.");
 
@@ -485,10 +467,10 @@ class variant<T0, Tn...> : private variant_internal::VariantBase<T0, Tn...> {
   constexpr variant() /*noexcept(see 111above)*/ = default;
 
   // Copy constructor, standard semantics
-  variant(const variant& other) = default;
+  variant(const variant&) = default;
 
   // Move constructor, standard semantics
-  variant(variant&& other) /*noexcept(see above)*/ = default;
+  variant(variant&&) /*noexcept(see above)*/ = default;
 
   // Constructs a variant of an alternative type specified by overload
   // resolution of the provided forwarding arguments through
@@ -499,18 +481,18 @@ class variant<T0, Tn...> : private variant_internal::VariantBase<T0, Tn...> {
   //
   // NOTE: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0608r1.html
   // has been voted passed the design phase in the C++ standard meeting in Mar
-  // 2018. It will be implemented and integrated into `absl::variant`.
+  // 2018. It will be implemented and integrated into `polly::variant`.
   template <
       class T,
       std::size_t I = std::enable_if<
           variant_internal::IsNeitherSelfNorInPlace<variant,
-                                                    absl::decay_t<T>>::value,
+                                                    decay_t<T>>::value,
           variant_internal::IndexOfConstructedType<variant, T>>::type::value,
-      class Tj = absl::variant_alternative_t<I, variant>,
-      absl::enable_if_t<std::is_constructible<Tj, T>::value>* =
+      class Tj = variant_alternative_t<I, variant>,
+      enable_if_t<std::is_constructible<Tj, T>::value>* =
           nullptr>
   constexpr variant(T&& t) noexcept(std::is_nothrow_constructible<Tj, T>::value)
-      : Base(variant_internal::EmplaceTag<I>(), absl::forward<T>(t)) {}
+      : Base(variant_internal::EmplaceTag<I>(), std::forward<T>(t)) {}
 
   // Constructs a variant of an alternative type from the arguments through
   // direct-initialization.
@@ -523,8 +505,8 @@ class variant<T0, Tn...> : private variant_internal::VariantBase<T0, Tn...> {
                 Args...>::value>::type* = nullptr>
   constexpr explicit variant(in_place_type_t<T>, Args&&... args)
       : Base(variant_internal::EmplaceTag<
-                 variant_internal::UnambiguousIndexOf<variant, T>::value>(),
-             absl::forward<Args>(args)...) {}
+                variant_internal::UnambiguousIndexOf<variant, T>::value>(),
+             std::forward<Args>(args)...) {}
 
   // Constructs a variant of an alternative type from an initializer list
   // and other arguments through direct-initialization.
@@ -539,7 +521,7 @@ class variant<T0, Tn...> : private variant_internal::VariantBase<T0, Tn...> {
                              Args&&... args)
       : Base(variant_internal::EmplaceTag<
                  variant_internal::UnambiguousIndexOf<variant, T>::value>(),
-             il, absl::forward<Args>(args)...) {}
+             il, std::forward<Args>(args)...) {}
 
   // Constructs a variant of an alternative type from a provided index,
   // through value-initialization using the provided forwarded arguments.
@@ -548,7 +530,7 @@ class variant<T0, Tn...> : private variant_internal::VariantBase<T0, Tn...> {
                 variant_internal::VariantAlternativeSfinaeT<I, variant>,
                 Args...>::value>::type* = nullptr>
   constexpr explicit variant(in_place_index_t<I>, Args&&... args)
-      : Base(variant_internal::EmplaceTag<I>(), absl::forward<Args>(args)...) {}
+      : Base(variant_internal::EmplaceTag<I>(), std::forward<Args>(args)...) {}
 
   // Constructs a variant of an alternative type from a provided index,
   // through value-initialization of an initializer list and the provided
@@ -560,33 +542,33 @@ class variant<T0, Tn...> : private variant_internal::VariantBase<T0, Tn...> {
   constexpr explicit variant(in_place_index_t<I>, std::initializer_list<U> il,
                              Args&&... args)
       : Base(variant_internal::EmplaceTag<I>(), il,
-             absl::forward<Args>(args)...) {}
+             std::forward<Args>(args)...) {}
 
   // Destructors
 
   // Destroys the variant's currently contained value, provided that
-  // `absl::valueless_by_exception()` is false.
+  // `polly::valueless_by_exception()` is false.
   ~variant() = default;
 
   // Assignment Operators
 
   // Copy assignment operator
-  variant& operator=(const variant& other) = default;
+  variant& operator=(const variant&) = default;
 
   // Move assignment operator
-  variant& operator=(variant&& other) /*noexcept(see above)*/ = default;
+  variant& operator=(variant&&) /*noexcept(see above)*/ = default;
 
   // Converting assignment operator
   //
   // NOTE: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0608r1.html
   // has been voted passed the design phase in the C++ standard meeting in Mar
-  // 2018. It will be implemented and integrated into `absl::variant`.
+  // 2018. It will be implemented and integrated into `polly::variant`.
   template <
       class T,
       std::size_t I = std::enable_if<
-          !std::is_same<absl::decay_t<T>, variant>::value,
+          !std::is_same<decay_t<T>, variant>::value,
           variant_internal::IndexOfConstructedType<variant, T>>::type::value,
-      class Tj = absl::variant_alternative_t<I, variant>,
+      class Tj = variant_alternative_t<I, variant>,
       typename std::enable_if<std::is_assignable<Tj&, T>::value &&
                               std::is_constructible<Tj, T>::value>::type* =
           nullptr>
@@ -595,7 +577,7 @@ class variant<T0, Tn...> : private variant_internal::VariantBase<T0, Tn...> {
           std::is_nothrow_constructible<Tj, T>::value) {
     variant_internal::VisitIndices<sizeof...(Tn) + 1>::Run(
         variant_internal::VariantCoreAccess::MakeConversionAssignVisitor(
-            this, absl::forward<T>(t)),
+            this, std::forward<T>(t)),
         index());
 
     return *this;
@@ -606,89 +588,88 @@ class variant<T0, Tn...> : private variant_internal::VariantBase<T0, Tn...> {
 
   // Constructs a value of the given alternative type T within the variant. The
   // existing value of the variant is destroyed first (provided that
-  // `absl::valueless_by_exception()` is false). Requires that T is unambiguous
+  // `polly::valueless_by_exception()` is false). Requires that T is unambiguous
   // in the variant.
   //
   // Example:
   //
-  //   absl::variant<std::vector<int>, int, std::string> v;
+  //   polly::variant<std::vector<int>, int, std::string> v;
   //   v.emplace<int>(99);
   //   v.emplace<std::string>("abc");
   template <
       class T, class... Args,
       typename std::enable_if<std::is_constructible<
-          absl::variant_alternative_t<
+          variant_alternative_t<
               variant_internal::UnambiguousIndexOf<variant, T>::value, variant>,
           Args...>::value>::type* = nullptr>
   T& emplace(Args&&... args) {
     return variant_internal::VariantCoreAccess::Replace<
         variant_internal::UnambiguousIndexOf<variant, T>::value>(
-        this, absl::forward<Args>(args)...);
+        this, std::forward<Args>(args)...);
   }
 
   // Constructs a value of the given alternative type T within the variant using
   // an initializer list. The existing value of the variant is destroyed first
-  // (provided that `absl::valueless_by_exception()` is false). Requires that T
+  // (provided that `polly::valueless_by_exception()` is false). Requires that T
   // is unambiguous in the variant.
   //
   // Example:
   //
-  //   absl::variant<std::vector<int>, int, std::string> v;
+  //   polly::variant<std::vector<int>, int, std::string> v;
   //   v.emplace<std::vector<int>>({0, 1, 2});
   template <
       class T, class U, class... Args,
       typename std::enable_if<std::is_constructible<
-          absl::variant_alternative_t<
+          variant_alternative_t<
               variant_internal::UnambiguousIndexOf<variant, T>::value, variant>,
           std::initializer_list<U>&, Args...>::value>::type* = nullptr>
   T& emplace(std::initializer_list<U> il, Args&&... args) {
     return variant_internal::VariantCoreAccess::Replace<
         variant_internal::UnambiguousIndexOf<variant, T>::value>(
-        this, il, absl::forward<Args>(args)...);
+        this, il, std::forward<Args>(args)...);
   }
 
   // Destroys the current value of the variant (provided that
-  // `absl::valueless_by_exception()` is false) and constructs a new value at
+  // `polly::valueless_by_exception()` is false) and constructs a new value at
   // the given index.
   //
   // Example:
   //
-  //   absl::variant<std::vector<int>, int, int> v;
+  //   polly::variant<std::vector<int>, int, int> v;
   //   v.emplace<1>(99);
   //   v.emplace<2>(98);
   //   v.emplace<int>(99);  // Won't compile. 'int' isn't a unique type.
   template <std::size_t I, class... Args,
             typename std::enable_if<
-                std::is_constructible<absl::variant_alternative_t<I, variant>,
+                std::is_constructible<variant_alternative_t<I, variant>,
                                       Args...>::value>::type* = nullptr>
-  absl::variant_alternative_t<I, variant>& emplace(Args&&... args) {
+  variant_alternative_t<I, variant>& emplace(Args&&... args) {
     return variant_internal::VariantCoreAccess::Replace<I>(
-        this, absl::forward<Args>(args)...);
+        this, std::forward<Args>(args)...);
   }
 
   // Destroys the current value of the variant (provided that
-  // `absl::valueless_by_exception()` is false) and constructs a new value at
+  // `polly::valueless_by_exception()` is false) and constructs a new value at
   // the given index using an initializer list and the provided arguments.
   //
   // Example:
   //
-  //   absl::variant<std::vector<int>, int, int> v;
+  //   polly::variant<std::vector<int>, int, int> v;
   //   v.emplace<0>({0, 1, 2});
   template <std::size_t I, class U, class... Args,
             typename std::enable_if<std::is_constructible<
-                absl::variant_alternative_t<I, variant>,
+                variant_alternative_t<I, variant>,
                 std::initializer_list<U>&, Args...>::value>::type* = nullptr>
-  absl::variant_alternative_t<I, variant>& emplace(std::initializer_list<U> il,
-                                                   Args&&... args) {
+  variant_alternative_t<I, variant>& emplace(std::initializer_list<U> il, Args&&... args) {
     return variant_internal::VariantCoreAccess::Replace<I>(
-        this, il, absl::forward<Args>(args)...);
+        this, il, std::forward<Args>(args)...);
   }
 
   // variant::valueless_by_exception()
   //
   // Returns false if and only if the variant currently holds a valid value.
   constexpr bool valueless_by_exception() const noexcept {
-    return this->index_ == absl::variant_npos;
+    return this->index_ == variant_npos;
   }
 
   // variant::index()
@@ -702,11 +683,11 @@ class variant<T0, Tn...> : private variant_internal::VariantBase<T0, Tn...> {
   // Swaps the values of two variant objects.
   //
   void swap(variant& rhs) noexcept(
-      absl::conjunction<
+      conjunction<
           std::is_nothrow_move_constructible<T0>,
           std::is_nothrow_move_constructible<Tn>...,
-          type_traits_internal::IsNothrowSwappable<T0>,
-          type_traits_internal::IsNothrowSwappable<Tn>...>::value) {
+          is_nothrow_swappable<T0>,
+          is_nothrow_swappable<Tn>...>::value) {
     return variant_internal::VisitIndices<sizeof...(Tn) + 1>::Run(
         variant_internal::Swap<T0, Tn...>{this, &rhs}, rhs.index());
   }
@@ -803,28 +784,27 @@ operator>=(const variant<Types...>& a, const variant<Types...>& b) {
                    a.index());
 }
 
-ABSL_NAMESPACE_END
-}  // namespace absl
+}  // namespace polly
 
 namespace std {
 
 // hash()
-template <>  // NOLINT
-struct hash<absl::monostate> {
-  std::size_t operator()(absl::monostate) const { return 0; }
+template <>
+struct hash<polly::monostate> {
+  std::size_t operator()(polly::monostate) const { return 0; }
 };
 
-template <class... T>  // NOLINT
-struct hash<absl::variant<T...>>
-    : absl::variant_internal::VariantHashBase<absl::variant<T...>, void,
-                                              absl::remove_const_t<T>...> {};
+template <class... T>
+struct hash<polly::variant<T...>>
+    : polly::variant_internal::VariantHashBase<
+        polly::variant<T...>, void,
+        typename std::remove_const<T>::type...> {};
 
 }  // namespace std
 
-#endif  // ABSL_USES_STD_VARIANT
+#endif  // POLLY_HAVE_STD_VARIANT
 
-namespace absl {
-ABSL_NAMESPACE_BEGIN
+namespace polly {
 namespace variant_internal {
 
 // Helper visitor for converting a variant<Ts...>` into another type (mostly
@@ -841,26 +821,23 @@ struct ConversionVisitor {
 
 // ConvertVariantTo()
 //
-// Helper functions to convert an `absl::variant` to a variant of another set of
+// Helper functions to convert an `polly::variant` to a variant of another set of
 // types, provided that the alternative type of the new variant type can be
 // converted from any type in the source variant.
 //
 // Example:
 //
-//   absl::variant<name1, name2, float> InternalReq(const Req&);
+//   polly::variant<name1, name2, float> InternalReq(const Req&);
 //
 //   // name1 and name2 are convertible to name
-//   absl::variant<name, float> ExternalReq(const Req& req) {
-//     return absl::ConvertVariantTo<absl::variant<name, float>>(
+//   polly::variant<name, float> ExternalReq(const Req& req) {
+//     return polly::ConvertVariantTo<polly::variant<name, float>>(
 //              InternalReq(req));
 //   }
 template <typename To, typename Variant>
 To ConvertVariantTo(Variant&& variant) {
-  return absl::visit(variant_internal::ConversionVisitor<To>{},
+  return polly::visit(variant_internal::ConversionVisitor<To>{},
                      std::forward<Variant>(variant));
 }
 
-ABSL_NAMESPACE_END
-}  // namespace absl
-
-#endif  // ABSL_TYPES_VARIANT_H_
+}  // namespace polly

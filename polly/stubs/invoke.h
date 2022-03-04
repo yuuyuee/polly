@@ -154,20 +154,20 @@ struct Invoker {
   >::type;
 };
 
+}  // namespace invoke_internal
+
 // The result type of Invoke<F, Args...>.
 template <typename F, typename... Args>
-using invoke_result_t = decltype(Invoker<F, Args...>::type::Invoke(
-    std::declval<F>(), std::declval<Args>()...));
+using invoke_result_t =
+    decltype(invoke_internal::Invoker<F, Args...>::type::Invoke(
+        std::declval<F>(), std::declval<Args>()...));
 
 // Invoke(f, args...) is an implementation of INVOKE(f, args...) from section
 // [func.require] of the C++ standard.
 template <typename F, typename... Args>
 invoke_result_t<F, Args...> invoke(F&& f, Args&&... args) {
-  return Invoker<F, Args...>::type::Invoke(
+  return invoke_internal::Invoker<F, Args...>::type::Invoke(
       std::forward<F>(f), std::forward<Args>(args)...);
 }
-}  // namespace invoke_internal
 
-using invoke_internal::invoke_result_t;
-using invoke_internal::invoke;
 }  // namespace polly
