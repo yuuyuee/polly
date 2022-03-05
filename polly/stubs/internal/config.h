@@ -111,6 +111,10 @@ static_assert(POLLY_GNUC_PREREQ(4, 8), "This library require GNUC version at lea
 # define POLLY_HAVE_STD_VARIANT 1
 #endif
 
+#if POLLY_HAS_INCLUDE(<span>)
+# define POLLY_HAVE_STD_SPAN 1
+#endif
+
 // Available on GCC 4.8+
 #if defined(__SANITIZE_ADDRESS__)
 # define POLLY_HAVE_ADDRESS_SANITIZER 1

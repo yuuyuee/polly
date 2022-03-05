@@ -1,4 +1,4 @@
-TARGETS = polly_stubs_test string_view_test hash_test type_traits_test optional_test any_test invoke_test variant_test
+TARGETS = polly_stubs_test string_view_test hash_test type_traits_test optional_test any_test invoke_test variant_test span_test
 DEFAULT_TARGETS = polly_stubs_test
 
 string_view_test_SRC = polly/stubs/string_view_test.cc \
@@ -33,12 +33,17 @@ invoke_test_SRC = polly/stubs/invoke_test.cc	\
 		third_party/gtest/gtest_main.cc         \
 		third_party/gtest/gmock-gtest-all.cc
 
-variant_test_SRC = polly/stubs/variant_test.cc \
+variant_test_SRC = polly/stubs/variant_test.cc   \
 		polly/stubs/internal/raw_logging.cc      \
 		polly/stubs/internal/throw_delegate.cc   \
 		third_party/gtest/gtest_main.cc          \
 		third_party/gtest/gmock-gtest-all.cc
 
+span_test_SRC = polly/stubs/span_test.cc 		 \
+		polly/stubs/internal/raw_logging.cc      \
+		polly/stubs/internal/throw_delegate.cc   \
+		third_party/gtest/gtest_main.cc          \
+		third_party/gtest/gmock-gtest-all.cc
 
 polly_stubs_test_SRC =                          \
 		polly/stubs/string_view_test.cc         \
