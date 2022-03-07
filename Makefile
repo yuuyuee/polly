@@ -8,9 +8,9 @@ string_view_test_SRC = polly/stubs/string_view_test.cc \
 		third_party/gtest/gtest_main.cc                \
 		third_party/gtest/gmock-gtest-all.cc
 
-hash_test_SRC = polly/stubs/hash_test.cc \
-		polly/stubs/hash.cc              \
-		third_party/gtest/gtest_main.cc  \
+hash_test_SRC = polly/stubs/hash_test.cc         \
+		polly/stubs/hash.cc                      \
+		third_party/gtest/gtest_main.cc          \
 		third_party/gtest/gmock-gtest-all.cc
 
 optional_test_SRC = polly/stubs/optional_test.cc \
@@ -29,8 +29,8 @@ type_traits_test_SRC = polly/stubs/type_traits_test.cc \
 		third_party/gtest/gtest_main.cc                \
 		third_party/gtest/gmock-gtest-all.cc
 
-invoke_test_SRC = polly/stubs/invoke_test.cc	\
-		third_party/gtest/gtest_main.cc         \
+invoke_test_SRC = polly/stubs/invoke_test.cc	 \
+		third_party/gtest/gtest_main.cc          \
 		third_party/gtest/gmock-gtest-all.cc
 
 variant_test_SRC = polly/stubs/variant_test.cc   \
@@ -39,21 +39,24 @@ variant_test_SRC = polly/stubs/variant_test.cc   \
 		third_party/gtest/gtest_main.cc          \
 		third_party/gtest/gmock-gtest-all.cc
 
-span_test_SRC = polly/stubs/span_test.cc 		 \
+span_test_SRC = polly/stubs/span_test.cc         \
 		polly/stubs/internal/raw_logging.cc      \
 		polly/stubs/internal/throw_delegate.cc   \
 		third_party/gtest/gtest_main.cc          \
 		third_party/gtest/gmock-gtest-all.cc
 
 polly_stubs_test_SRC =                          \
+		polly/stubs/internal/raw_logging.cc     \
+		polly/stubs/internal/throw_delegate.cc  \
+		polly/stubs/hash.cc                     \
+		polly/stubs/type_traits_test.cc         \
 		polly/stubs/string_view_test.cc         \
 		polly/stubs/optional_test.cc            \
 		polly/stubs/any_test.cc                 \
 		polly/stubs/hash_test.cc                \
-		polly/stubs/type_traits_test.cc         \
-		polly/stubs/internal/raw_logging.cc     \
-		polly/stubs/internal/throw_delegate.cc  \
-		polly/stubs/hash.cc                     \
+		polly/stubs/invoke_test.cc              \
+		polly/stubs/variant_test.cc             \
+		polly/stubs/span_test.cc                \
 		third_party/gtest/gtest_main.cc         \
 		third_party/gtest/gmock-gtest-all.cc
 

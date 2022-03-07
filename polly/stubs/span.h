@@ -1,20 +1,3 @@
-
-//
-// Copyright 2017 The Abseil Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-
 // This header file defines a `Span<T>` type for holding a reference to existing
 // array data. The `Span` object, much like the `polly::string_view` object,
 // does not own such data itself, and the data being referenced by the span must
@@ -30,8 +13,7 @@
 //
 // The C++20 draft standard includes a `std::span` type. As of June 2020, the
 // differences between `polly::Span` and `std::span` are:
-//    * `polly::Span` has `operator==` (which is likely a design bug,
-//       per https://abseil.io/blog/20180531-regular-types)
+//    * `polly::Span` has `operator==`
 //    * `polly::Span` has the factory functions `MakeSpan()` and
 //      `MakeConstSpan()`
 //    * bounds-checked access to `polly::Span` is accomplished with `at()`
@@ -425,13 +407,6 @@ class Span {
                : (throw_delegate_internal::ThrowStdOutOfRange("len > size()"), Span());
   }
 
-  // Support for polly::Hash.
-  template <typename H>
-  friend H AbslHashValue(H h, Span v) {
-    return H::combine(H::combine_contiguous(std::move(h), v.data(), v.size()),
-                      v.size());
-  }
-
  private:
   pointer ptr_;
   size_type len_;
@@ -446,13 +421,6 @@ const typename Span<T>::size_type Span<T>::npos;
 // We provide three overloads for each operator to cover any combination on the
 // left or right hand side of mutable Span<T>, read-only Span<const T>, and
 // convertible-to-read-only Span<T>.
-// TODO(zhangxy): Due to MSVC overload resolution bug with partial ordering
-// template functions, 5 overloads per operator is needed as a workaround. We
-// should update them to 3 overloads per operator using non-deduced context like
-// string_view, i.e.
-// - (Span<T>, Span<T>)
-// - (Span<T>, non_deduced<Span<const T>>)
-// - (non_deduced<Span<const T>>, Span<T>)
 
 // operator==
 template <typename T>

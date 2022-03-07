@@ -1,17 +1,3 @@
-// Copyright 2018 The Abseil Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #pragma once
 
 #include "polly/stubs/internal/config.h"
@@ -508,11 +494,6 @@ struct VisitIndicesVariadic
 // This implementation will flatten N-ary visit operations into a single switch
 // statement when the number of cases would be less than our maximum specified
 // switch-statement size.
-// TODO(calabrese)
-//   Based on benchmarks, determine whether the function table approach actually
-//   does optimize better than a chain of switch statements and possibly update
-//   the implementation accordingly. Also consider increasing the maximum switch
-//   size.
 template <std::size_t... EndIndices>
 struct VisitIndices
     : conditional_t<(NumCasesOfSwitch<EndIndices...>::value <=
@@ -578,7 +559,6 @@ struct VariantCoreAccess {
     // This cast instead of invocation of AccessUnion with an rvalue is a
     // workaround for msvc. Without this there is a runtime failure when dealing
     // with rvalues.
-    // TODO(calabrese) Reduce test case and find a simpler workaround.
     return static_cast<VariantAccessResult<I, Variant>>(
         variant_internal::AccessUnion(self.state_, SizeT<I>()));
   }
@@ -877,7 +857,7 @@ using RawVisitResult =
 // SFINAE-friendly, so we can deduce the return type by examining the first
 // result. If it's not callable, then we get an error, but are compliant and
 // fast to compile.
-// TODO(calabrese) Possibly rewrite in a way that yields better compile errors
+// TODO: Possibly rewrite in a way that yields better compile errors
 // at the cost of longer compile-times.
 template <class Op, class... QualifiedVariants>
 struct VisitResultImpl {
@@ -917,7 +897,7 @@ struct PerformVisitation {
     ThrowBadVariantAccess();
   }
 
-  // TODO(calabrese) Avoid using a tuple, which causes lots of instantiations
+  // TODO: Avoid using a tuple, which causes lots of instantiations
   // Attempts using lambda variadic captures fail on current GCC.
   std::tuple<QualifiedVariants&&...> variant_tup;
   Op&& op;
@@ -959,7 +939,7 @@ union Union<Head, Tail...> {
   TailUnion tail;
 };
 
-// TODO(calabrese) Just contain a Union in this union (certain configs fail).
+// TODO: Just contain a Union in this union (certain configs fail).
 template <class... T>
 union DestructibleUnionImpl;
 
@@ -1518,7 +1498,7 @@ struct SwapSameIndex {
   void operator()(SizeT<variant_npos>) const {}
 };
 
-// TODO(calabrese) do this from a different namespace for proper adl usage
+// TODO: do this from a different namespace for proper adl usage
 template <class... Types>
 struct Swap {
   variant<Types...>* v;

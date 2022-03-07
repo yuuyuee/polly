@@ -1,17 +1,3 @@
-// Copyright 2017 The Abseil Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include "polly/stubs/span.h"
 
 #include <array>
@@ -794,22 +780,5 @@ TEST(Span, SpanSize) {
   EXPECT_LE(sizeof(polly::Span<int>), 2 * sizeof(void*));
   EXPECT_LE(sizeof(polly::Span<BigStruct>), 2 * sizeof(void*));
 }
-
-#if 0
-TEST(Span, Hash) {
-  int array[] = {1, 2, 3, 4};
-  int array2[] = {1, 2, 3};
-  using T = polly::Span<const int>;
-  EXPECT_TRUE(polly::VerifyTypeImplementsAbslHashCorrectly(
-      {// Empties
-       T(), T(nullptr, 0), T(array, 0), T(array2, 0),
-       // Different array with same value
-       T(array, 3), T(array2), T({1, 2, 3}),
-       // Same array, but different length
-       T(array, 1), T(array, 2),
-       // Same length, but different array
-       T(array + 1, 2), T(array + 2, 2)}));
-}
-#endif
 
 }  // namespace
