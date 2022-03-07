@@ -83,5 +83,15 @@ constexpr const Tp& max(const Tp& a, const Tp& b) {
   return a < b ? b: a;
 }
 
+// Forms lvalue reference to const type of Tp.
+template <typename Tp>
+constexpr typename std::add_const<Tp>::type& as_const(Tp& v) noexcept {
+  return v;
+}
+
+// const rvalue reference overload is deleted to disallow rvalue arguments.
+template <typename Tp>
+void as_const(Tp&& v) = delete;
+
 
 } // namespace polly
