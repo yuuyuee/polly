@@ -1,7 +1,11 @@
-// Copyright RCT Power 2025
-// Author: ivan.yu (ivan.yu@rct-power.com.cn)
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#include "rctems/common/logging.h"
+#include "polly/logging.h"
 
 #include <utility>
 
@@ -18,7 +22,7 @@
 // BOOST_LOG_ATTRIBUTE_KEYWORD(file, "RCT_FILE", const char*);
 // BOOST_LOG_ATTRIBUTE_KEYWORD(line, "RCT_LINE", int16_t);
 
-namespace rctems {
+namespace polly {
 
 namespace logging = boost::log;
 namespace sinks = boost::log::sinks;
@@ -61,7 +65,7 @@ void InitLogSystem(const std::string& severity, const std::string& sinks) {
     }
     if (sinks == "file") {
         auto sink = logging::add_file_log(
-                keywords::file_name = "rctems_%N.log",
+                keywords::file_name = "polly_%N.log",
                 keywords::rotation_size = 10 * 1024 * 1024,
                 keywords::time_based_rotation =
                     sinks::file::rotation_at_time_point(0, 0, 0),
@@ -75,4 +79,4 @@ void InitLogSystem(const std::string& severity, const std::string& sinks) {
     core->set_filter(logging::trivial::severity >= ToEnum(severity));
 }
 
-}  // namespace rctems
+}  // namespace polly

@@ -1,20 +1,24 @@
-// Copyright RCT Power 2025
-// Author: ivan.yu (ivan.yu@rct-power.com.cn)
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#ifndef RCTEMS_COMMUNICATION_MODBUS_H_
-#define RCTEMS_COMMUNICATION_MODBUS_H_
+#ifndef POLLY_COMMUNICATION_MODBUS_H_
+#define POLLY_COMMUNICATION_MODBUS_H_
 
 #include <cstdint>
 #include <string>
 #include <type_traits>
 
-#include "rctems/common/stubs.h"
-#include "rctems/common/asio.h"
+#include "polly/stubs.h"
+#include "polly/asio.h"
 
 #include "boost/url.hpp"
 #include "modbus/modbus.h"
 
-namespace rctems {
+namespace polly {
 
 class ModbusClient {
  public:
@@ -49,7 +53,8 @@ class ModbusClient {
     int res_timeout_ms_ = 500;
     modbus_t* context_ = nullptr;
 
-    RCTEMS_DISALLOW_COPY_AND_ASSIGN(ModbusClient);
+    ModbusClient(const ModbusClient&) = delete;
+    ModbusClient& operator=(const ModbusClient&) = delete;
 };
 
 static_assert(std::is_move_assignable_v<rctems::ModbusClient>);
@@ -127,6 +132,6 @@ inline void ModbusServer::WriteRegisters(int addr,
     WriteRegisters(addr, num, reinterpret_cast<const uint16_t*>(dest));
 }
 
-}  // namespace rctems
+}  // namespace polly
 
-#endif  // RCTEMS_COMMUNICATION_MODBUS_H_
+#endif  // POLLY_COMMUNICATION_MODBUS_H_

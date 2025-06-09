@@ -1,13 +1,17 @@
-// Copyright RCT Power 2025
-// Author: ivan.yu (ivan.yu@rct-power.com.cn)
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#include "rctems/database/sql.h"
+#include "polly/database/sql.h"
 
 #include <cassert>
 #include <set>
-#include "rctems/common/strings.h"
+#include "polly/strings.h"
 
-namespace rctems {
+namespace polly {
 namespace sql_internal {
 
 // Simple SQL escape
@@ -132,4 +136,4 @@ std::string DeleteFrom::Build() const {
     return sql;
 }
 
-}  // namespace rctems
+}  // namespace polly

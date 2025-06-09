@@ -1,6 +1,11 @@
-// Copyright 2022 The Oak Authors.
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#include "oak/common/system.h"
+#include "polly/system.h"
 
 #include <sched.h>
 #include <sys/syscall.h>
@@ -12,11 +17,11 @@
 
 #include <atomic>
 
-#include "oak/common/fs.h"
-#include "oak/common/error_code.h"
-#include "oak/common/format.h"
-#include "oak/common/throw_delegate.h"
-#include "oak/common/debug.h"
+#include "polly/fs.h"
+#include "polly/error_code.h"
+#include "polly/format.h"
+#include "polly/throw_delegate.h"
+#include "polly/debug.h"
 
 namespace oak {
 
@@ -232,6 +237,4 @@ void System::SetProcessName(const std::string&) {
   // TODO(YUYUE):
 }
 
-
-
-}  // namespace oak
+}  // namespace polly

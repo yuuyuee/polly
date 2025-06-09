@@ -1,10 +1,15 @@
-// Copyright 2022 The Oak Authors.
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
 #include <iostream>
 #include <string>
 #include <thread>
-#include "oak/common/kafka.h"
-#include "oak/logging/logging.h"
+#include "polly/kafka.h"
+#include "polly/logging.h"
 
 namespace {
 

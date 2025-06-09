@@ -1,8 +1,12 @@
-// Copyright RCT Power 2025
-// Author: ivan.yu (ivan.yu@rct-power.com.cn)
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#ifndef RCTEMS_COMMON_STRINGS_H_
-#define RCTEMS_COMMON_STRINGS_H_
+#ifndef POLLY_COMMON_STRINGS_H_
+#define POLLY_COMMON_STRINGS_H_
 
 #include <cctype>
 #include <string>
@@ -13,7 +17,7 @@
 #include <iterator>
 #include <type_traits>
 
-namespace rctems {
+namespace polly {
 std::map<std::string, std::string> ParseKeyValue(const std::string& str);
 
 inline std::string_view TrimLeft(std::string_view str) {
@@ -75,6 +79,6 @@ inline std::string Join(const Container& container,
 }
 
 
-}  // namespace rctems
+}  // namespace polly
 
-#endif  // RCTEMS_COMMON_STRINGS_H_
+#endif  // POLLY_COMMON_STRINGS_H_

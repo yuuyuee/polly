@@ -1,5 +1,9 @@
-// Copyright RCT Power 2025
-// Author: ivan.yu (ivan.yu@rct-power.com.cn)
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
 #ifdef RCTEMS_USE_MYSQL
 #include <mysql/mysql.h>
@@ -8,11 +12,11 @@
 #include <memory>
 #include <iostream>
 
-#include "rctems/database/database.h"
-#include "rctems/common/logging.h"
-#include "rctems/common/strings.h"
+#include "polly/database/database.h"
+#include "poll/logging.h"
+#include "polly/strings.h"
 
-namespace rctems {
+namespace polly {
 namespace {
 const struct DatabaseGlobalInitInternal {
     DatabaseGlobalInitInternal() {
@@ -148,6 +152,6 @@ ConnectionPtr MysqlBuilder(const DataSource& ds) {
     return std::make_unique<MySQLConnection>(ds);
 }
 
-}  // namespace rctems
+}  // namespace polly
 
 #endif  // RCTEMS_USE_MYSQL

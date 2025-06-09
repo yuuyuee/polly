@@ -1,14 +1,18 @@
-// Copyright RCT Power 2025
-// Author: ivan.yu (ivan.yu@rct-power.com.cn)
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#ifndef RCTEMS_COMMON_LOGGING_H_
-#define RCTEMS_COMMON_LOGGING_H_
+#ifndef POLLY_COMMON_LOGGING_H_
+#define POLLY_COMMON_LOGGING_H_
 
 #include <string>
 
 #include "boost/log/trivial.hpp"
 
-namespace rctems {
+namespace polly {
 
 namespace logging_internal {
 // Strip directory which any leading directory compoents has removed.
@@ -18,7 +22,7 @@ constexpr const char* Basename(const char* fname, int off) {
 }
 
 #define RCTEMS_FILE     \
-    ::rctems::logging_internal::Basename(__FILE__, sizeof(__FILE__) - 1)
+    ::polly::logging_internal::Basename(__FILE__, sizeof(__FILE__) - 1)
 
 }  // namespace logging_internal
 
@@ -33,6 +37,6 @@ constexpr const char* Basename(const char* fname, int off) {
 #define RCTEMS_FATAL()    RCTEMS_LOG(fatal)
 
 void InitLogSystem(const std::string& severity, const std::string& sinks);
-}  // namespace rctems
+}  // namespace polly
 
-#endif  // RCTEMS_COMMON_LOGGING_H_
+#endif  // POLLY_COMMON_LOGGING_H_

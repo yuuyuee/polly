@@ -1,12 +1,17 @@
-// Copyright 2022 The Oak Authors.
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#ifndef OAK_COMMON_FS_H_
-#define OAK_COMMON_FS_H_
+#ifndef POLLY_COMMON_FS_H_
+#define POLLY_COMMON_FS_H_
 
 #include <sys/types.h>
 #include <string>
 
-namespace oak {
+namespace polly {
 
 // Return directory name of the path.
 std::string DirectoryName(const std::string& path);
@@ -121,6 +126,6 @@ class File {
   bool owner_;
 };
 
-}  // namespace oak
+}  // namespace polly
 
-#endif  // OAK_COMMON_FS_H_
+#endif  // POLLY_COMMON_FS_H_

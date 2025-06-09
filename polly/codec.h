@@ -1,12 +1,17 @@
-// Copyright 2022 The Oak Authors.
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#ifndef OAK_COMMON_CODEC_H_
-#define OAK_COMMON_CODEC_H_
+#ifndef POLLY_COMMON_CODEC_H_
+#define POLLY_COMMON_CODEC_H_
 
 #include <stdint.h>
 #include <stddef.h>
 
-namespace oak {
+namespace polly {
 #define OAK_INT(bit) int ## bit ## _t
 #define OAK_UINT(bit) uint ## bit ## _t
 
@@ -108,6 +113,6 @@ inline void* SetVarint32(void* buffer, uint32_t value) {
   }
 }
 
-}  // namespace oak
+}  // namespace polly
 
-#endif  // OAK_COMMON_CODEC_H_
+#endif  // POLLY_COMMON_CODEC_H_

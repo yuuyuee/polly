@@ -1,7 +1,11 @@
-// Copyright RCT Power 2025
-// Author: ivan.yu (ivan.yu@rct-power.com.cn)
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#include "rctems/database/database.h"
+#include "polly/database/database.h"
 
 #include <assert.h>
 #include <iostream>
@@ -12,10 +16,10 @@
 #include <utility>
 
 #include "boost/url.hpp"
-#include "rctems/common/logging.h"
+#include "polly/logging.h"
 #include "boost/lexical_cast.hpp"
 
-namespace rctems {
+namespace polly {
 
 using std::chrono::steady_clock;
 using std::chrono::duration_cast;
@@ -168,4 +172,4 @@ int DataSource::GetWriteTimeout() const {
     return write_timeout_;
 }
 
-}  // namespace rctems
+}  // namespace polly

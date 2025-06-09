@@ -1,8 +1,12 @@
-// Copyright RCT Power 2025
-// Author: ivan.yu (ivan.yu@rct-power.com.cn)
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#ifndef RCTEMS_DATABASE_DATABASE_H_
-#define RCTEMS_DATABASE_DATABASE_H_
+#ifndef POLLY_DATABASE_DATABASE_H_
+#define POLLY_DATABASE_DATABASE_H_
 
 #include <vector>
 #include <string>
@@ -10,9 +14,9 @@
 #include <map>
 #include <chrono>  // NOLINT
 
-#include "rctems/common/stubs.h"
+#include "polly/stubs.h"
 
-namespace rctems {
+namespace polly {
 class DataSource;
 
 class Connection {
@@ -27,7 +31,8 @@ class Connection {
     Connection();
 
  private:
-    RCTEMS_DISALLOW_COPY_AND_ASSIGN(Connection);
+    Connection(const Connection&) = delete;
+    Connection& operator=(const Connection&) = delete;
 };
 
 using ConnectionPtr = std::unique_ptr<Connection>;
@@ -72,5 +77,5 @@ class DataSource {
     std::map<std::string, ConnectionBuilder> builder_;
 };
 
-}  // namespace rctems
-#endif  // RCTEMS_DATABASE_DATABASE_H_
+}  // namespace polly
+#endif  // POLLY_DATABASE_DATABASE_H_

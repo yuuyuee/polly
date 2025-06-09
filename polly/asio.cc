@@ -1,13 +1,17 @@
-// Copyright RCT Power 2025
-// Author: ivan.yu (ivan.yu@rct-power.com.cn)
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#include "rctems/common/asio.h"
+#include "polly/asio.h"
 
 #include <mutex>  // NOLINT
 #include <utility>
-#include "rctems/common/logging.h"
+#include "polly/logging.h"
 
-namespace rctems {
+namespace polly {
 
 Timer::Timer(asio::io_context* context, std::function<void()>&& func)
         : handler_(*context), func_(std::move(func)) {}
@@ -35,4 +39,4 @@ void Timer::Stop() {
     handler_.cancel();
 }
 
-}  // namespace rctems
+}  // namespace polly

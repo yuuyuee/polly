@@ -1,6 +1,11 @@
-// Copyright 2022 The Oak Authors.
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#include "oak/common/fs.h"
+#include "polly/fs.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -13,11 +18,11 @@
 #include <assert.h>
 #include <string.h>
 
-#include "oak/common/error_code.h"
-#include "oak/common/format.h"
-#include "oak/common/throw_delegate.h"
+#include "polly/error_code.h"
+#include "polly/format.h"
+#include "polly/throw_delegate.h"
 
-namespace oak {
+namespace polly {
 #define THROW_SYSTEM_ERROR(...) \
     oak::ThrowStdSystemError(oak::Format(__VA_ARGS__))
 
@@ -238,4 +243,4 @@ int File::Release() noexcept {
   return fd;
 }
 
-}  // namespace oak
+}  // namespace polly

@@ -1,7 +1,12 @@
-// Copyright 2022 The Oak Authors.
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#ifndef OAK_COMMON_SYSTEM_H_
-#define OAK_COMMON_SYSTEM_H_
+#ifndef POLLY_COMMON_SYSTEM_H_
+#define POLLY_COMMON_SYSTEM_H_
 
 #include <unistd.h>
 #include <pthread.h>
@@ -10,7 +15,7 @@
 #include <functional>
 #include <utility>
 
-namespace oak {
+namespace polly {
 
 struct LogicCore {
   int logic_core_id;
@@ -66,6 +71,6 @@ struct System {
   static void SetProcessName(const std::string& proc_name);
 };
 
-}  // namespace oak
+}  // namespace polly
 
-#endif  // OAK_COMMON_SYSTEM_H_
+#endif  // POLLY_COMMON_SYSTEM_H_

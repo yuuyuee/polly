@@ -1,6 +1,11 @@
-// Copyright 2022 The Oak Authors.
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#include "oak/common/debug.h"
+#include "polly/debug.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -13,11 +18,11 @@
 #include <atomic>
 #include <memory>
 
-#include "oak/common/error_code.h"
-#include "oak/common/system.h"
-#include "oak/common/format.h"
-#include "oak/common/fs.h"
-#include "oak/common/throw_delegate.h"
+#include "polly/error_code.h"
+#include "polly/system.h"
+#include "polly/format.h"
+#include "polly/fs.h"
+#include "polly/throw_delegate.h"
 
 namespace oak {
 namespace {

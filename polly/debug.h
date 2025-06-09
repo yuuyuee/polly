@@ -1,11 +1,16 @@
-// Copyright 2022 The Oak Authors.
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#ifndef OAK_COMMON_DEBUG_H_
-#define OAK_COMMON_DEBUG_H_
+#ifndef POLLY_COMMON_DEBUG_H_
+#define POLLY_COMMON_DEBUG_H_
 
 #include <string>
 
-namespace oak {
+namespace polly {
 // Signale alternate stack.
 
 // Checks whether or not the signal alternate stack has been enabled.
@@ -25,6 +30,6 @@ void RegisterFailureMessageHandler(const std::string& fname);
 // Wites failure message useful for debugging, if unspecified writer,
 // the failure message will be emitted to the standard error output.
 void RegisterFailureSignalHandler();
-}  // namespace oak
+}  // namespace polly
 
-#endif  // OAK_COMMON_DEBUG_H_
+#endif  // POLLY_COMMON_DEBUG_H_

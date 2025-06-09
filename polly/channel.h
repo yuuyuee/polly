@@ -1,15 +1,20 @@
-// Copyright 2022 The Oak Authors.
+// Copyright (C) 2025 Ivan Yu (yuyue2200@hotmail.com)
+//
+// This file is placed under the LGPL.  Please see the file
+// COPYING for more details.
+//
+// SPDX-License-Identifier: LGPL-2.1
 
-#ifndef OAK_COMMON_CHANNEL_H_
-#define OAK_COMMON_CHANNEL_H_
+#ifndef POLLY_COMMON_CHANNEL_H_
+#define POLLY_COMMON_CHANNEL_H_
 
 #include <assert.h>
 #include <stdint.h>
 #include <atomic>
 
-#include "oak/common/macros.h"
+#include "polly/macros.h"
 
-namespace oak {
+namespace polly {
 
 // Queue
 // This class is a multi producer and multi consumer queue without locks.
@@ -134,7 +139,7 @@ class alignas(OAK_CACHELINE_SIZE) Channel {
   char padding5_[OAK_CACHELINE_SIZE - sizeof(prod_tail_)];
 };
 
-}  // namespace oak
+}  // namespace polly
 
-#endif  // OAK_COMMON_CHANNEL_H_
+#endif  // POLLY_COMMON_CHANNEL_H_
 
