@@ -1,35 +1,14 @@
-// Copyright 2022 The Oak Authors.
+// Copyright RCT Power 2025
+// Author: ivan.yu (ivan.yu@rct-power.com.cn)
 
-#ifndef OAK_LOGGING_LOGGING_H_
-#define OAK_LOGGING_LOGGING_H_
+#ifndef RCTEMS_COMMON_LOGGING_H_
+#define RCTEMS_COMMON_LOGGING_H_
 
-#include <stdlib.h>
-#include <functional>
-#include "oak/common/stringpiece.h"
-#include "oak/logging/log_level.h"
-#include "oak/common/macros.h"
+#include <string>
 
-#define OAK_LOG(level, ...) do {                      \
-  oak::logging_internal::LogImpl(                     \
-      oak::LogLevel::OAK_LOG_LEVEL_ ## level,         \
-      oak::logging_internal::Basename(                \
-          __FILE__, sizeof(__FILE__) - 1),            \
-      __LINE__, __VA_ARGS__);                         \
-  if (oak::LogLevel::OAK_LOG_LEVEL_ ## level ==       \
-      oak::LogLevel::OAK_LOG_LEVEL_FATAL)             \
-    abort();                                          \
-} while (0)
+#include "boost/log/trivial.hpp"
 
-#define OAK_DEBUG(...)    OAK_LOG(DEBUG, __VA_ARGS__)
-#define OAK_INFO(...)     OAK_LOG(INFO, __VA_ARGS__)
-#define OAK_WARNING(...)  OAK_LOG(WARNING, __VA_ARGS__)
-#define OAK_ERROR(...)    OAK_LOG(ERROR, __VA_ARGS__)
-#define OAK_FATAL(...)    OAK_LOG(FATAL, __VA_ARGS__)
-
-namespace oak {
-
-void RegisterLogger(std::function<void(StringPiece)>&& logger);
-void SetupLogLevel(LogLevel level);
+namespace rctems {
 
 namespace logging_internal {
 // Strip directory which any leading directory compoents has removed.
@@ -38,9 +17,22 @@ constexpr const char* Basename(const char* fname, int off) {
       ? fname + off : Basename(fname, off - 1);
 }
 
-void LogImpl(LogLevel level, const char* fname, int line, const char* fmt, ...)
-    OAK_ATTR_PRINTF(4, 5);
-}  // namespace logging_internal
-}  // namespace oak
+#define RCTEMS_FILE     \
+    ::rctems::logging_internal::Basename(__FILE__, sizeof(__FILE__) - 1)
 
-#endif  // OAK_LOGGING_LOGGING_H_
+}  // namespace logging_internal
+
+#define RCTEMS_LOG(sev)     \
+    BOOST_LOG_TRIVIAL(sev) << RCTEMS_FILE << ":" << __LINE__ << " "
+
+#define RCTEMS_TRACE()    RCTEMS_LOG(trace)
+#define RCTEMS_DEBUG()    RCTEMS_LOG(debug)
+#define RCTEMS_INFO()     RCTEMS_LOG(info)
+#define RCTEMS_WARNING()  RCTEMS_LOG(warning)
+#define RCTEMS_ERROR()    RCTEMS_LOG(error)
+#define RCTEMS_FATAL()    RCTEMS_LOG(fatal)
+
+void InitLogSystem(const std::string& severity, const std::string& sinks);
+}  // namespace rctems
+
+#endif  // RCTEMS_COMMON_LOGGING_H_

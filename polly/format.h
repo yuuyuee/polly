@@ -1,22 +1,29 @@
-// Copyright 2022 The Oak Authors.
+// Copyright RCT Power 2025
+// Author: ivan.yu (ivan.yu@rct-power.com.cn)
 
-#ifndef OAK_COMMON_FORMAT_H_
-#define OAK_COMMON_FORMAT_H_
+#ifndef RCTEMS_COMMON_FORMAT_H_
+#define RCTEMS_COMMON_FORMAT_H_
 
-#include <stdarg.h>
-#include <string>
-#include "oak/common/macros.h"
+#if __cplusplus >= 202002L
+#   include <format>
 
-namespace oak {
+namespace rctems {
+using std::format;
+using fmt::format_to;
+using fmt::format_args;
+}  // namespace rctems
+#else
+#   define FMT_HEADER_ONLY 1
+#   include "fmt/format.h"
 
-// This is an simple wrapper for snprintf and vsnprintf.
-size_t format(char* buffer, size_t size, const char* fmt, ...)
-    OAK_ATTR_PRINTF(3, 4);
-size_t format(char* buffer, size_t size, const char* fmt, va_list ap);
+namespace rctems {
+using fmt::format;
+using fmt::format_to;
+using fmt::format_args;
 
-// Formatted output to string.
-std::string Format(const char* fmt, ...) OAK_ATTR_PRINTF(1, 2);
-std::string Format(const char* fmt, va_list ap);
-}  // namespace oak
+template <typename... Args>
+using format_string = fmt::format_string<Args...>;
+}  // namespace rctems
+#endif
 
-#endif  // OAK_COMMON_FORMAT_H_
+#endif  // RCTEMS_COMMON_FORMAT_H_

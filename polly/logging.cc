@@ -1,62 +1,78 @@
-// Copyright 2022 The Oak Authors.
+// Copyright RCT Power 2025
+// Author: ivan.yu (ivan.yu@rct-power.com.cn)
 
-#include "oak/logging/logging.h"
+#include "rctems/common/logging.h"
 
-#include <unistd.h>
-#include <stdarg.h>
 #include <utility>
 
-namespace oak {
-namespace logging_internal {
+#include "boost/log/support/date_time.hpp"
+#include "boost/log/attributes.hpp"
+#include "boost/log/common.hpp"
+#include "boost/log/core.hpp"
+#include "boost/log/exceptions.hpp"
+#include "boost/log/expressions.hpp"
+#include "boost/log/sinks.hpp"
+#include "boost/log/trivial.hpp"
+#include "boost/log/utility/setup.hpp"
+
+// BOOST_LOG_ATTRIBUTE_KEYWORD(file, "RCT_FILE", const char*);
+// BOOST_LOG_ATTRIBUTE_KEYWORD(line, "RCT_LINE", int16_t);
+
+namespace rctems {
+
+namespace logging = boost::log;
+namespace sinks = boost::log::sinks;
+namespace src = boost::log::sources;
+namespace expr = boost::log::expressions;
+namespace attrs = boost::log::attributes;
+namespace keywords = boost::log::keywords;
+
 namespace {
-
-constexpr const char kTailMsg[] = "... (message truncated)\n";
-constexpr const size_t kTailMsgSize = sizeof(kTailMsg);
-
-void DefaultLogger(StringPiece msg) {
-  IGNORE_UNUESD(write(STDERR_FILENO, msg.data(), msg.size()));
+inline logging::trivial::severity_level ToEnum(const std::string& severity) {
+    return severity == "trace" ? logging::trivial::trace
+            : severity == "debug" ? logging::trivial::debug
+            : severity == "info" ? logging::trivial::info
+            : severity == "warning" ? logging::trivial::warning
+            : severity == "error" ? logging::trivial::error
+            : severity == "fatal" ? logging::trivial::fatal
+            : logging::trivial::warning;
 }
 
-std::function<void(StringPiece)> kLogger(DefaultLogger);
-LogLevel kLogLevel = LogLevel::OAK_LOG_LEVEL_ERROR;
+#define TS(fmt) \
+    expr::format_date_time<boost::posix_time::ptime>("Timestamp", fmt)
+
 }  // anonymous namespace
 
-void LogImpl(LogLevel level, const char* fname, int line, const char* fmt, ...) {
-  constexpr const int kBufferSize = 2048;
-  char buffer[kBufferSize];
+void InitLogSystem(const std::string& severity, const std::string& sinks) {
+    auto core = boost::log::core::get();
+    logging::add_common_attributes();
+    // core->add_global_attribute(
+    //         "RCT_FILE",
+    //         attrs::mutable_constant<const char*>(""));
+    // core->add_global_attribute(
+    //         "RCT_LINE",
+    //         attrs::constant<int>(0));
 
-  if (level < kLogLevel)
-    return;
+    const char* fmt = "%TimeStamp% %Severity% %Message%";
 
-  int plen = snprintf(buffer, kBufferSize, "%s [%s:%d] ",
-      LogLevelShortName(level), fname, line);
+    core->remove_all_sinks();
+    if (sinks == "console") {
+        logging::add_console_log(std::clog, keywords::format = fmt);
+    }
+    if (sinks == "file") {
+        auto sink = logging::add_file_log(
+                keywords::file_name = "rctems_%N.log",
+                keywords::rotation_size = 10 * 1024 * 1024,
+                keywords::time_based_rotation =
+                    sinks::file::rotation_at_time_point(0, 0, 0),
+                keywords::auto_flush = true,
+                keywords::target = ".",
+                keywords::max_files = 10,
+                keywords::format = fmt);
+        sink->locked_backend()->scan_for_files();
+    }
 
-  va_list ap;
-  va_start(ap, fmt);
-  int len = vsnprintf(buffer + plen, kBufferSize - plen, fmt, ap);
-  if (len < 0) len = 0;
-  if (len >= kBufferSize - plen) {
-    memcpy(buffer + kBufferSize - kTailMsgSize, kTailMsg, kTailMsgSize);
-    // snprintf and vsnprintf write at most size bytes inlcude the
-    // terminating null byte '\0'.
-    len = kBufferSize - plen - 1;
-  }
-  va_end(ap);
-
-  if (kLogger) {
-    kLogger({buffer, static_cast<size_t>(plen + len)});
-  } else {
-    DefaultLogger({buffer, static_cast<size_t>(plen + len)});
-  }
-}
-}  // namespace logging_internal
-
-void RegisterLogger(std::function<void(StringPiece)>&& logger) {
-  logging_internal::kLogger = std::move(logger);
+    core->set_filter(logging::trivial::severity >= ToEnum(severity));
 }
 
-void SetupLogLevel(LogLevel level) {
-  logging_internal::kLogLevel = level;
-}
-
-}  // namespace oak
+}  // namespace rctems
