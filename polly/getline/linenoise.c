@@ -1,6 +1,3 @@
-// Copyright RCT Power 2025
-// Author: ivan.yu (ivan.yu@rct-power.com.cn)
-
 /* linenoise.c -- guerrilla line editing library against the idea that a
  * line editing lib needs to be 20,000 lines of C code.
  *
